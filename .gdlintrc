@@ -1,0 +1,7 @@
+# gdlint (gdtoolkit) configuration.
+# class-definitions-order is disabled on purpose: data-heavy files (balance.gd)
+# group constants by domain next to the formulas that use them.
+disable:
+  - class-definitions-order
+max-public-methods: 40
+max-returns: 8
