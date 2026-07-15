@@ -143,8 +143,8 @@ func _spawn_tick(dt: float) -> void:
 			return
 		var value := mini(chunk, queue_left)
 		queue_left -= value
-		var pos := Vector2(aim_x + rng.randf_range(-10.0, 10.0), BalanceS.DROP_Y)
-		var vel := Vector2(rng.randf_range(-28.0, 28.0), rng.randf_range(20.0, 60.0))
+		var pos := Vector2(aim_x + rng.randf_range(-26.0, 26.0), BalanceS.DROP_Y)
+		var vel := Vector2(rng.randf_range(-60.0, 60.0), rng.randf_range(20.0, 60.0))
 		balls.append(BoardGenS.make_ball(pos, vel, value))
 
 

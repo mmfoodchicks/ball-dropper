@@ -44,6 +44,8 @@ var _end_t := 0.0
 var _spawn_queue: Array = []
 var _spawn_timer := 0.0
 var _is_boss_wave := false
+var _wave_t := 0.0
+var _stall_report_at := 45.0
 
 
 func _ready() -> void:
@@ -76,6 +78,8 @@ func start_wave(w: int) -> void:
 	_is_boss_wave = w >= BalanceS.BOSS_WAVE
 	_spawn_queue = _build_queue(w)
 	_spawn_timer = 0.0
+	_wave_t = 0.0
+	_stall_report_at = 45.0
 	state = "banner"
 	_banner_text = "BOSS INCOMING" if _is_boss_wave else "WAVE %d" % w
 	_banner_t = 2.4 if _is_boss_wave else BalanceS.WAVE_BANNER_TIME
@@ -114,6 +118,10 @@ func step(dt: float) -> void:
 						_spawn_next()
 		"fight":
 			_spawn_tick(dt)
+			_wave_t += dt
+			if run.autoplay and _wave_t >= _stall_report_at:
+				_stall_report_at += 25.0
+				_print_stall_state()
 		"cleared":
 			_inter_t -= dt
 			if _inter_t <= 0.0:
@@ -437,6 +445,28 @@ func on_hero_died() -> void:
 	_end_t = 1.2
 
 
+func _print_stall_state() -> void:
+	## Autoplay diagnostics: if a wave runs long, dump who is still alive so
+	## CI logs identify the unkillable entity / stuck state exactly.
+	var parts := PackedStringArray()
+	for e in enemies:
+		parts.append("%s hp%.0f@(%.0f,%.0f)" % [e.kind, e.hp, e.position.x, e.position.y])
+	print(
+		(
+			"AUTOPLAY-STALL: wave %d t=%.0fs queue=%d bullets=%d hero=(%.0f,%.0f) enemies: %s"
+			% [
+				wave,
+				_wave_t,
+				_spawn_queue.size(),
+				bullets.size(),
+				hero.position.x,
+				hero.position.y,
+				", ".join(parts),
+			]
+		)
+	)
+
+
 # ---------------------------------------------------------------- autoplay bot
 
 
@@ -464,13 +494,17 @@ func _bot_move() -> Vector2:
 				flee += (pos - h.position).normalized() * 1.5
 	var to_center := (Vector2(240.0, 480.0) - pos) * 0.004
 	var tangent := flee.rotated(PI * 0.5) * 0.35
-	# Nothing pressuring us: close distance so shots have a short flight.
-	var seek := Vector2.ZERO
-	if flee.length() < 0.01:
-		var nearest = nearest_enemy(pos)
-		if nearest != null and pos.distance_to(nearest.position) > 230.0:
-			seek = (nearest.position - pos).normalized() * 0.7
-	return (flee * 1.4 + to_center + tangent + seek).limit_length(1.0)
+	var extra := Vector2.ZERO
+	var near_e = nearest_enemy(pos)
+	if near_e != null:
+		var nd := pos.distance_to(near_e.position)
+		if flee.length() < 0.3 and nd < 150.0:
+			# Surrounded: symmetric threats cancel out — break out sideways.
+			extra = (pos - near_e.position).normalized().rotated(PI * 0.5) * 1.2
+		elif flee.length() < 0.01 and nd > 230.0:
+			# Nothing pressuring us: close distance so shots fly shorter.
+			extra = (near_e.position - pos).normalized() * 0.7
+	return (flee * 1.4 + to_center + tangent + extra).limit_length(1.0)
 
 
 # ---------------------------------------------------------------- drawing

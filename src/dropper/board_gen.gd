@@ -42,19 +42,20 @@ static func generate(rng: RandomNumberGenerator, opts: Dictionary) -> Dictionary
 	var gates: Array = []
 	var next_id := 0
 
-	# Slot grid: three rows, 2-3 gates each, jittered.
+	# Slot grid: 3 / 2 / 3 gates per row. The middle row is offset half a
+	# column and jitter is wide, so straight falls rarely thread multiple
+	# gates in a perfect vertical chain.
 	var rows: Array = []
 	var row_ys := [255.0, 415.0, 575.0]
 	for i in row_ys.size():
 		var y: float = row_ys[i] + rng.randf_range(-14.0, 14.0)
 		var slots: Array = []
-		var three := i < 2 or rng.randf() < 0.35
-		if three:
-			for x in [90.0, 240.0, 390.0]:
-				slots.append(Vector2(x + rng.randf_range(-16.0, 16.0), y))
-		else:
+		if i == 1:
 			for x in [155.0, 325.0]:
-				slots.append(Vector2(x + rng.randf_range(-20.0, 20.0), y))
+				slots.append(Vector2(x + rng.randf_range(-30.0, 30.0), y))
+		else:
+			for x in [90.0, 240.0, 390.0]:
+				slots.append(Vector2(x + rng.randf_range(-30.0, 30.0), y))
 		rows.append(slots)
 
 	# Decide gate types. Bouncebacks only on rows 1-2 so a bounced ball has
@@ -87,8 +88,11 @@ static func generate(rng: RandomNumberGenerator, opts: Dictionary) -> Dictionary
 			kind = "sub"
 			sub_budget -= 1
 		var gate := _make_gate(rng, next_id, kind, slot["pos"], lucky, hacker)
+		gate["row"] = slot["row"]
 		gates.append(gate)
 		next_id += 1
+
+	_cap_vertical_chains(gates)
 
 	# Guiding physics lines: random angled bars between the gate rows.
 	var lines: Array = []
@@ -109,6 +113,26 @@ static func generate(rng: RandomNumberGenerator, opts: Dictionary) -> Dictionary
 				lines.append(guard)
 
 	return {"gates": gates, "lines": lines}
+
+
+static func _cap_vertical_chains(gates: Array) -> void:
+	## Near-aligned multiplier gates on different rows can both be hit by the
+	## same falling ball; cap the pair's product so a focused stream lands a
+	## satisfying jackpot instead of an economy-breaking x40+.
+	for i in gates.size():
+		for j in range(i + 1, gates.size()):
+			var top: Dictionary = gates[i]
+			var bottom: Dictionary = gates[j]
+			if top["type"] != "mult" or bottom["type"] != "mult":
+				continue
+			if top["row"] == bottom["row"]:
+				continue
+			if absf(top["x"] - bottom["x"]) >= 46.0:
+				continue
+			while int(top["value"]) * int(bottom["value"]) > 12:
+				var big: Dictionary = top if int(top["value"]) >= int(bottom["value"]) else bottom
+				big["value"] = int(big["value"]) - 1
+				big["base_value"] = big["value"]
 
 
 static func _make_gate(
