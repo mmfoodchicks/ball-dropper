@@ -43,7 +43,9 @@ var _auto_t := 0.0
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	_rng.randomize()
+	# Flags after "--" land in get_cmdline_user_args(), not get_cmdline_args().
 	var args := OS.get_cmdline_args()
+	args.append_array(OS.get_cmdline_user_args())
 	autoplay = "--autoplay" in args
 	god_mode = "--god" in args
 	turbo = "--turbo" in args
@@ -111,6 +113,8 @@ func start_run(character_id: String) -> void:
 func _enter_combat(wave: int) -> void:
 	state = "combat"
 	run.wave = wave
+	if autoplay:
+		print("AUTOPLAY: wave %d (balls %d, hp %d)" % [wave, run.balls, int(run.hp)])
 	screens.hide_all()
 	arena = ArenaS.new()
 	arena.run = run
@@ -151,6 +155,13 @@ func _on_drop_pressed() -> void:
 func _on_dropper_finished(result: Dictionary) -> void:
 	run.balls = int(result["final"])
 	run.bonus_gold += int(result["gold"])
+	if autoplay:
+		print(
+			(
+				"AUTOPLAY: dropper %d -> %d (x%.2f)"
+				% [int(result["start"]), int(result["final"]), float(result["mult"])]
+			)
+		)
 	state = "result"
 	hud.set_mode("hidden")
 	screens.show_result(result)
