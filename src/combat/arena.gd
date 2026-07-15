@@ -71,6 +71,8 @@ func _physics_process(delta: float) -> void:
 func start_wave(w: int) -> void:
 	wave = w
 	run.wave = w
+	if run.autoplay:
+		print("AUTOPLAY: wave %d starting (balls %d)" % [w, run.balls])
 	_is_boss_wave = w >= BalanceS.BOSS_WAVE
 	_spawn_queue = _build_queue(w)
 	_spawn_timer = 0.0
@@ -445,8 +447,8 @@ func _bot_move() -> Vector2:
 		if not e.alive:
 			continue
 		var d := pos.distance_to(e.position)
-		if d < 220.0:
-			flee += (pos - e.position).normalized() * ((220.0 - d) / 220.0)
+		if d < 150.0:
+			flee += (pos - e.position).normalized() * ((150.0 - d) / 150.0)
 	if boss != null and boss.alive:
 		var d := pos.distance_to(boss.position)
 		if d < 260.0:
@@ -462,7 +464,13 @@ func _bot_move() -> Vector2:
 				flee += (pos - h.position).normalized() * 1.5
 	var to_center := (Vector2(240.0, 480.0) - pos) * 0.004
 	var tangent := flee.rotated(PI * 0.5) * 0.35
-	return (flee * 1.4 + to_center + tangent).limit_length(1.0)
+	# Nothing pressuring us: close distance so shots have a short flight.
+	var seek := Vector2.ZERO
+	if flee.length() < 0.01:
+		var nearest = nearest_enemy(pos)
+		if nearest != null and pos.distance_to(nearest.position) > 230.0:
+			seek = (nearest.position - pos).normalized() * 0.7
+	return (flee * 1.4 + to_center + tangent + seek).limit_length(1.0)
 
 
 # ---------------------------------------------------------------- drawing

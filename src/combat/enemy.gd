@@ -21,6 +21,8 @@ var alive := true
 var flash_t := 0.0
 var spawn_t := 0.45
 var contact_cd := 0.0
+## Measured each step so the hero can lead its shots.
+var vel_estimate := Vector2.ZERO
 
 # brute charge state
 var charge_state := "approach"
@@ -31,6 +33,7 @@ var charge_dir := Vector2.ZERO
 # spitter state
 var orbit_dir := 1.0
 var shot_cd := 1.2
+var strafe_t := 0.0
 
 var _speed_jitter := 1.0
 
@@ -42,6 +45,7 @@ func setup(enemy_kind: String, wave: int, arena_ref) -> void:
 	_speed_jitter = rng.randf_range(0.9, 1.1)
 	orbit_dir = 1.0 if rng.randf() < 0.5 else -1.0
 	shot_cd = rng.randf_range(0.8, 1.6)
+	strafe_t = rng.randf_range(0.0, 1.7)
 	charge_cd = rng.randf_range(1.0, 2.2)
 	match kind:
 		"peon":
@@ -73,6 +77,7 @@ func step(dt: float) -> void:
 		spawn_t -= dt
 		queue_redraw()
 		return
+	var pre := position
 	var hero = arena.hero
 	if hero != null and hero.alive:
 		match kind:
@@ -84,6 +89,7 @@ func step(dt: float) -> void:
 				_step_spitter(dt, hero)
 		_try_contact(hero)
 	_clamp_to_arena()
+	vel_estimate = (position - pre) / maxf(dt, 0.0001)
 	queue_redraw()
 
 
@@ -118,10 +124,14 @@ func _step_brute(dt: float, hero) -> void:
 
 
 func _step_spitter(dt: float, hero) -> void:
-	var to_me: Vector2 = position - hero.position
-	var ring_pos: Vector2 = hero.position + to_me.normalized().rotated(orbit_dir * 0.5) * 210.0
-	var dir: Vector2 = (ring_pos - position).normalized()
-	position += (dir * speed * _speed_jitter + _separation()) * dt
+	# Move-then-hold rhythm: the hold window is what makes spitters hittable
+	# (and shootable-at) instead of orbit-dodging every unled bullet forever.
+	strafe_t += dt
+	if fmod(strafe_t, 1.7) < 1.1:
+		var to_me: Vector2 = position - hero.position
+		var ring_pos: Vector2 = hero.position + to_me.normalized().rotated(orbit_dir * 0.5) * 210.0
+		var dir: Vector2 = (ring_pos - position).normalized()
+		position += (dir * speed * _speed_jitter + _separation()) * dt
 	shot_cd -= dt
 	if shot_cd <= 0.0:
 		shot_cd = 1.9

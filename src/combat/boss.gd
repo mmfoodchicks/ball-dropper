@@ -18,6 +18,8 @@ var phase := 1
 var flash_t := 0.0
 var contact_cd := 0.0
 var spin := 0.0
+## Measured each step so the hero can lead its shots.
+var vel_estimate := Vector2.ZERO
 
 var _move_state := "drift"
 var _charge_t := 0.0
@@ -40,10 +42,12 @@ func step(dt: float, hero) -> void:
 	flash_t = maxf(0.0, flash_t - dt)
 	contact_cd = maxf(0.0, contact_cd - dt)
 	spin += dt * (0.6 + 0.5 * phase)
+	var pre := position
 	_update_phase()
 	_move(dt, hero)
 	_attacks(dt, hero)
 	_contact(hero)
+	vel_estimate = (position - pre) / maxf(dt, 0.0001)
 	queue_redraw()
 
 

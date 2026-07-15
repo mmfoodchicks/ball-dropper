@@ -41,7 +41,12 @@ func step(dt: float, move_dir: Vector2, manual_aim: Vector2) -> void:
 	if manual_aim.length() > 0.2:
 		_aim = manual_aim.normalized()
 	elif target != null:
-		_aim = (target.position - position).normalized()
+		# Lead the shot by projected bullet flight time, or orbiting enemies
+		# sidestep every bullet.
+		var to_t: Vector2 = target.position - position
+		var flight: float = to_t.length() / maxf(run.bullet_speed, 1.0)
+		var predicted: Vector2 = target.position + target.vel_estimate * flight
+		_aim = (predicted - position).normalized()
 	elif moving:
 		_aim = move_dir.normalized()
 
