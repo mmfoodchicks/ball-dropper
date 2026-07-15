@@ -1,0 +1,9 @@
+# Godot generated caches
+.godot/
+*.translation
+
+# OS / editor noise
+.DS_Store
+Thumbs.db
+*.log
+*.tmp
