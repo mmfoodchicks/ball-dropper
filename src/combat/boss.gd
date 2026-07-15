@@ -98,14 +98,14 @@ func _attacks(dt: float, hero) -> void:
 	if _ring_t <= 0.0:
 		_ring_t = 2.6 if phase < 3 else 3.4
 		var count := 14 if phase < 3 else 18
-		var base := arena.rng.randf() * TAU
+		var base: float = arena.rng.randf() * TAU
 		for i in count:
-			var ang := base + TAU * i / count
+			var ang: float = base + TAU * i / count
 			_shoot(Vector2.from_angle(ang))
 	_aimed_t -= dt
 	if _aimed_t <= 0.0:
 		_aimed_t = 1.5
-		var aim := (hero.position - position).normalized()
+		var aim: Vector2 = (hero.position - position).normalized()
 		for off in [-0.22, 0.0, 0.22]:
 			_shoot(aim.rotated(off))
 	if phase >= 2:

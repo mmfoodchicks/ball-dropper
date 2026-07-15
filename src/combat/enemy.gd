@@ -88,7 +88,7 @@ func step(dt: float) -> void:
 
 
 func _step_peon(dt: float, hero) -> void:
-	var dir := (hero.position - position).normalized()
+	var dir: Vector2 = (hero.position - position).normalized()
 	var sep := _separation()
 	position += (dir * speed * _speed_jitter + sep) * dt
 
@@ -97,7 +97,7 @@ func _step_brute(dt: float, hero) -> void:
 	charge_cd = maxf(0.0, charge_cd - dt)
 	match charge_state:
 		"approach":
-			var dir := (hero.position - position).normalized()
+			var dir: Vector2 = (hero.position - position).normalized()
 			position += (dir * speed * _speed_jitter + _separation()) * dt
 			if charge_cd <= 0.0 and position.distance_to(hero.position) < 160.0:
 				charge_state = "windup"
@@ -118,14 +118,14 @@ func _step_brute(dt: float, hero) -> void:
 
 
 func _step_spitter(dt: float, hero) -> void:
-	var to_me := position - hero.position
-	var ring_pos := hero.position + to_me.normalized().rotated(orbit_dir * 0.5) * 210.0
-	var dir := (ring_pos - position).normalized()
+	var to_me: Vector2 = position - hero.position
+	var ring_pos: Vector2 = hero.position + to_me.normalized().rotated(orbit_dir * 0.5) * 210.0
+	var dir: Vector2 = (ring_pos - position).normalized()
 	position += (dir * speed * _speed_jitter + _separation()) * dt
 	shot_cd -= dt
 	if shot_cd <= 0.0:
 		shot_cd = 1.9
-		var aim := (hero.position - position).normalized()
+		var aim: Vector2 = (hero.position - position).normalized()
 		arena.spawn_enemy_bullet(
 			position + aim * (radius + 4.0),
 			aim * BalanceS.ENEMY_BULLET_SPEED,

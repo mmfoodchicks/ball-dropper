@@ -73,7 +73,7 @@ func clear() -> void:
 func _draw() -> void:
 	var font := ThemeDB.fallback_font
 	for p: Dictionary in particles:
-		var pa := 1.0 - p["t"] / p["life"]
+		var pa: float = 1.0 - p["t"] / p["life"]
 		var pc: Color = p["color"]
 		draw_circle(p["pos"], p["r"] * pa, Color(pc.r, pc.g, pc.b, pa))
 	for f: Dictionary in floaters:

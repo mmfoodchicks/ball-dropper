@@ -71,6 +71,9 @@ static func generate(rng: RandomNumberGenerator, opts: Dictionary) -> Dictionary
 	var mystery_budget := 0
 	if mystery_guaranteed or rng.randf() < BalanceS.MYSTERY_CHANCE:
 		mystery_budget = 1
+	# Non-multiplier budgets may never squeeze multipliers below 3
+	# (GDD: the board must always offer meaningful reward paths).
+	sub_budget = mini(sub_budget, all_slots.size() - 3 - bounce_budget - mystery_budget)
 
 	for slot: Dictionary in all_slots:
 		var kind := "mult"

@@ -216,7 +216,7 @@ func _on_boss_defeated() -> void:
 
 
 func _on_hero_down() -> void:
-	var gold := BalanceS.defeat_gold(run.wave, run.balls) + run.bonus_gold
+	var gold: int = BalanceS.defeat_gold(run.wave, run.balls) + run.bonus_gold
 	Meta.add_rewards(gold, 0)
 	Meta.record_run(run.wave, false)
 	_free_arena()
@@ -248,7 +248,7 @@ func _on_resume() -> void:
 
 func _on_abandon() -> void:
 	get_tree().paused = false
-	var gold := BalanceS.defeat_gold(run.wave, run.balls) + run.bonus_gold
+	var gold: int = BalanceS.defeat_gold(run.wave, run.balls) + run.bonus_gold
 	Meta.add_rewards(gold, 0)
 	Meta.record_run(run.wave, false)
 	_free_arena()
