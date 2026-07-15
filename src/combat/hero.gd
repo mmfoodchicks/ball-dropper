@@ -73,7 +73,7 @@ func _fire_volley() -> void:
 		var off := (float(i) - (n - 1) * 0.5) * spread
 		var dir := _aim.rotated(off)
 		arena.spawn_bullet(
-			position + dir * (radius() + 4.0),
+			position + dir * (radius() - 2.0),
 			dir * run.bullet_speed,
 			dmg,
 			run.bullet_radius,

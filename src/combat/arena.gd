@@ -267,31 +267,8 @@ func _step_bullets(dt: float) -> void:
 		if not b.alive:
 			continue
 		b.step(dt)
-		if not b.alive:
-			continue
-		var targets: Array = enemies.duplicate()
-		if boss != null and boss.alive:
-			targets.append(boss)
-		for e in targets:
-			if not e.alive or not b.alive:
-				continue
-			if e.get("spawn_t") != null and e.spawn_t > 0.0:
-				continue
-			var id: int = e.get_instance_id()
-			if b.already_hit(id):
-				continue
-			if b.position.distance_to(e.position) < b.radius + e.radius:
-				b.mark_hit(id)
-				var crit: bool = rng.randf() < run.crit_chance
-				var dmg: float = b.dmg * (run.crit_mult if crit else 1.0)
-				if run.executioner and e.is_elite:
-					dmg *= 1.25
-				e.take_hit(dmg, crit)
-				Sfx.play("hit", 0.15, -10.0)
-				if b.pierce_left > 0:
-					b.pierce_left -= 1
-				else:
-					b.alive = false
+		if b.alive:
+			_bullet_hit_pass(b)
 	for b in enemy_bullets.duplicate():
 		if not b.alive:
 			continue
@@ -300,6 +277,35 @@ func _step_bullets(dt: float) -> void:
 			if b.position.distance_to(hero.position) < b.radius + hero.radius():
 				b.alive = false
 				hero.take_damage(b.dmg)
+
+
+func _bullet_hit_pass(b) -> void:
+	## Also runs once at spawn: bullets spawn ahead of the muzzle, so a
+	## point-blank enemy would otherwise sit in a dead zone between the hero
+	## and the first post-move collision check and never get hit.
+	var targets: Array = enemies.duplicate()
+	if boss != null and boss.alive:
+		targets.append(boss)
+	for e in targets:
+		if not e.alive or not b.alive:
+			continue
+		if e.get("spawn_t") != null and e.spawn_t > 0.0:
+			continue
+		var id: int = e.get_instance_id()
+		if b.already_hit(id):
+			continue
+		if b.position.distance_to(e.position) < b.radius + e.radius:
+			b.mark_hit(id)
+			var crit: bool = rng.randf() < run.crit_chance
+			var dmg: float = b.dmg * (run.crit_mult if crit else 1.0)
+			if run.executioner and e.is_elite:
+				dmg *= 1.25
+			e.take_hit(dmg, crit)
+			Sfx.play("hit", 0.15, -10.0)
+			if b.pierce_left > 0:
+				b.pierce_left -= 1
+			else:
+				b.alive = false
 
 
 func _cleanup() -> void:
@@ -369,6 +375,8 @@ func spawn_bullet(pos: Vector2, vel: Vector2, dmg: float, radius: float, pierce:
 	b.z_index = 4
 	add_child(b)
 	bullets.append(b)
+	# Point-blank targets overlap the muzzle position; resolve immediately.
+	_bullet_hit_pass(b)
 
 
 func spawn_enemy_bullet(pos: Vector2, vel: Vector2, dmg: float) -> void:
@@ -529,7 +537,18 @@ func _bot_move() -> Vector2:
 		elif flee.length() < 0.01 and nd > 230.0:
 			# Nothing pressuring us: close distance so shots fly shorter.
 			extra = (near_e.position - pos).normalized() * 0.7
-	return (flee * 1.4 + to_center + tangent + extra).limit_length(1.0)
+	# Never let flee pin us into walls/corners.
+	var rect := BalanceS.ARENA_RECT
+	var wall := Vector2.ZERO
+	if pos.x - rect.position.x < 70.0:
+		wall.x += 1.0
+	if rect.end.x - pos.x < 70.0:
+		wall.x -= 1.0
+	if pos.y - rect.position.y < 70.0:
+		wall.y += 1.0
+	if rect.end.y - pos.y < 70.0:
+		wall.y -= 1.0
+	return (flee * 1.4 + to_center + tangent + extra + wall * 1.1).limit_length(1.0)
 
 
 # ---------------------------------------------------------------- drawing
