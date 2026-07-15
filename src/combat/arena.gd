@@ -119,6 +119,15 @@ func step(dt: float) -> void:
 		"fight":
 			_spawn_tick(dt)
 			_wave_t += dt
+			# Watchdog: a dead hero while the wave still "fights" is an
+			# illegal state — resolve it instead of hanging the run.
+			if not hero.alive:
+				if hero.god:
+					hero.alive = true
+					print("WATCHDOG: god hero resurrected (illegal death)")
+				else:
+					print("WATCHDOG: dead hero in fight state, ending run")
+					on_hero_died()
 			if run.autoplay and _wave_t >= _stall_report_at:
 				_stall_report_at += 25.0
 				_print_stall_state()
@@ -450,17 +459,33 @@ func _print_stall_state() -> void:
 	## CI logs identify the unkillable entity / stuck state exactly.
 	var parts := PackedStringArray()
 	for e in enemies:
-		parts.append("%s hp%.0f@(%.0f,%.0f)" % [e.kind, e.hp, e.position.x, e.position.y])
+		parts.append(
+			(
+				"%s hp%.0f sp%.2f al%s @(%.0f,%.0f)"
+				% [e.kind, e.hp, e.spawn_t, e.alive, e.position.x, e.position.y]
+			)
+		)
 	print(
 		(
-			"AUTOPLAY-STALL: wave %d t=%.0fs queue=%d bullets=%d hero=(%.0f,%.0f) enemies: %s"
+			(
+				"AUTOPLAY-STALL: w%d t=%.0fs st=%s q=%d bl=%d hero=(%.0f,%.0f) "
+				+ "alive=%s god=%s hp=%.0f acc=%.2f aim=(%.2f,%.2f) tgt=%s | %s"
+			)
 			% [
 				wave,
 				_wave_t,
+				state,
 				_spawn_queue.size(),
 				bullets.size(),
 				hero.position.x,
 				hero.position.y,
+				hero.alive,
+				hero.god,
+				run.hp,
+				hero._fire_acc,
+				hero._aim.x,
+				hero._aim.y,
+				nearest_enemy(hero.position) != null,
 				", ".join(parts),
 			]
 		)

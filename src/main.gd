@@ -114,7 +114,12 @@ func _enter_combat(wave: int) -> void:
 	state = "combat"
 	run.wave = wave
 	if autoplay:
-		print("AUTOPLAY: wave %d (balls %d, hp %d)" % [wave, run.balls, int(run.hp)])
+		print(
+			(
+				"AUTOPLAY: wave %d (balls %d, hp %d, upgrades %s)"
+				% [wave, run.balls, int(run.hp), run.picked_upgrades]
+			)
+		)
 	screens.hide_all()
 	arena = ArenaS.new()
 	arena.run = run

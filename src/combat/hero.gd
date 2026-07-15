@@ -25,6 +25,8 @@ func radius() -> float:
 func step(dt: float, move_dir: Vector2, manual_aim: Vector2) -> void:
 	if not alive:
 		return
+	if god:
+		run.hp = run.max_hp
 	iframes = maxf(0.0, iframes - dt)
 	frenzy_t = maxf(0.0, frenzy_t - dt)
 	if run.regen > 0.0:
