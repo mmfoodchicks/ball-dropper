@@ -4,12 +4,12 @@
 Regenerate all sprites:      python3 tools/make_sprites.py
 Output:                      assets/sprites/*.png  (+ sheet_preview.png)
 
-Style: chibi character figures — big head, small body, stubby feet, readable
-faces and gear — with chunky dark outlines and 3-band shading (think cozy
-16-bit critters). All original designs, drawn deterministically on small
-pixel grids and upscaled x4 nearest-neighbour. Colors mirror the entity
-colors in src/balance.gd. Replace any PNG with hand-made art (same
-filename) and the game picks it up automatically.
+Style: gritty 16-bit figures — angular slab bodies, squared pauldrons,
+helmeted heads, glowing slit eyes under heavy brows, muted highlights.
+Serious, not cutesy. All original designs, deterministic, upscaled x4
+nearest-neighbour. Colors track src/balance.gd. Replace any PNG with
+hand-made art (same filename) and the game picks it up automatically;
+missing files fall back to vector shapes in-game.
 """
 
 import math
@@ -19,10 +19,11 @@ from PIL import Image, ImageDraw
 
 SCALE = 4
 OUTDIR = os.path.join(os.path.dirname(__file__), "..", "assets", "sprites")
-OUTLINE = (24, 18, 32, 255)
-SKIN = (255, 205, 158)
-DARK = (30, 24, 40)
-WHITE = (250, 250, 255)
+OUTLINE = (20, 16, 28, 255)
+SKIN = (222, 178, 138)
+DARK = (26, 22, 36)
+STEEL = (168, 176, 192)
+PALE = (226, 234, 248)
 
 
 def clamp(v):
@@ -35,6 +36,11 @@ def tint(c, f):
 
 def mix(a, b, t):
     return tuple(clamp(a[i] + (b[i] - a[i]) * t) for i in range(3))
+
+
+def desat(c, t=0.2):
+    g = clamp(0.3 * c[0] + 0.55 * c[1] + 0.15 * c[2])
+    return mix(c, (g, g, g), t)
 
 
 class Px:
@@ -55,7 +61,7 @@ class Px:
     def mask_pixels(self, inside):
         return [(x, y) for y in range(self.s) for x in range(self.s) if inside(x, y)]
 
-    def glow(self, inside, color, spread=3, alpha=70):
+    def glow(self, inside, color, spread=2, alpha=60):
         pts = self.mask_pixels(inside)
         for d in range(spread, 0, -1):
             a = int(alpha * (1.0 - (d - 1) / spread))
@@ -74,19 +80,19 @@ class Px:
         h = max(1, y1 - y0)
         for (x, y) in pts:
             t = (y - y0) / h
-            if t < 0.22:
-                f = 1.32
-            elif t < 0.5:
-                f = 1.1
-            elif t < 0.8:
-                f = 0.95
+            if t < 0.2:
+                f = 1.16
+            elif t < 0.52:
+                f = 1.04
+            elif t < 0.82:
+                f = 0.92
             else:
-                f = 0.72
+                f = 0.62
             self.set(x, y, tint(base, f))
         if rim:
             for (x, y) in pts:
-                if (not inside(x - 1, y) or not inside(x, y - 1)) and (y - y0) / h < 0.55:
-                    self.set(x, y, tint(base, 1.55))
+                if not inside(x - 1, y) and (y - y0) / h < 0.45:
+                    self.set(x, y, tint(base, 1.26))
 
     def paint(self, inside, c):
         for (x, y) in self.mask_pixels(inside):
@@ -136,7 +142,19 @@ def ellipse(cx, cy, rx, ry):
     return lambda x, y: ((x - cx) / rx) ** 2 + ((y - cy) / ry) ** 2 <= 1.0
 
 
-def star(cx, cy, r, points=8, inner=0.55):
+def trap(cx, top, wt, wb, h):
+    """Trapezoid slab: width wt at the top edge tapering to wb at the bottom."""
+
+    def inside(x, y):
+        if y < top or y > top + h:
+            return False
+        t = (y - top) / max(1.0, h)
+        return abs(x - cx) <= (wt + (wb - wt) * t) / 2.0
+
+    return inside
+
+
+def star(cx, cy, r, points=8, inner=0.62):
     def inside(x, y):
         dx, dy = x - cx, y - cy
         d = math.hypot(dx, dy)
@@ -152,52 +170,22 @@ def union(*fns):
     return lambda x, y: any(f(x, y) for f in fns)
 
 
-# ---------------------------------------------------------------- figure kit
+# ---------------------------------------------------------------- face kit
 
 
-def eyes(px, cx, ey, gap=3, pupil=DARK, wide=False):
-    for sx in (cx - gap, cx + gap):
-        px.set(sx, ey, WHITE)
-        px.set(sx, ey + 1, pupil)
-        if wide:
-            px.set(sx + (1 if sx > cx else -1), ey, WHITE)
-            px.set(sx + (1 if sx > cx else -1), ey + 1, pupil)
+def slit_eyes(px, cx, ey, gap, glow=(255, 84, 70), w=2):
+    """Glowing slits under a heavy dark brow — the standard hostile face."""
+    for s in (-1, 1):
+        x = cx + s * gap
+        px.hline(x - w // 2, x + (w - 1) // 2, ey, glow)
+        px.hline(x - w // 2 - 1, x + (w - 1) // 2 + 1, ey - 1, DARK)
 
 
-def cyclops(px, cx, ey, c=(140, 240, 255)):
-    px.rect(cx - 2, ey, cx + 2, ey + 1, DARK)
-    px.set(cx, ey, c)
-    px.dots([(cx - 1, ey), (cx + 1, ey)], tint(c, 0.6))
-
-
-def mouth(px, cx, my, w=2):
-    px.hline(cx - w // 2, cx + w // 2, my, tint(DARK, 1.4))
-
-
-def feet(px, cx, fy, spread, c):
-    for sx in (cx - spread, cx + spread):
-        px.rect(sx - 1, fy, sx + 1, fy + 1, tint(c, 0.6))
-
-
-def arms(px, cx, ay, reach, c):
-    for sx in (cx - reach, cx + reach):
-        px.rect(sx - 1, ay, sx, ay + 2, tint(c, 0.85))
-
-
-def helmet(px, head, hcy, c, crest_c=None, cx=None, visor=False):
-    for (x, y) in px.mask_pixels(head):
-        if y <= hcy:
-            px.set(x, y, tint(c, 1.15 if y < hcy - 2 else 0.95))
-    if crest_c is not None and cx is not None:
-        px.vline(cx, hcy - 8, hcy - 5, crest_c)
-    if visor and cx is not None:
-        px.hline(cx - 3, cx + 3, hcy + 1, DARK)
-
-
-def body_block(px, cx, top, w, h, c):
-    m = ellipse(cx, top + h / 2.0, w / 2.0, h / 2.0 + 0.6)
-    px.fill(m, c)
-    return m
+def stern_eyes(px, cx, ey, gap, ec=PALE):
+    for s in (-1, 1):
+        x = cx + s * gap
+        px.set(x, ey, ec)
+        px.hline(x - 1, x + 1, ey - 1, DARK)
 
 
 # ---------------------------------------------------------------- palette
@@ -228,84 +216,111 @@ C = {
 
 
 # ---------------------------------------------------------------- characters
-# Chibi adventurers: skin head + helmet/hat in the class color, tunic body,
-# stubby feet, and one piece of signature gear each.
+# Grim adventurers: squared pauldrons, slab torso, small helmeted head,
+# class weapon. Light comes from top-left, highlights stay muted.
 
 
-def _adventurer(cid, hat="cap"):
-    c = C[cid]
+def _warrior(cid):
+    c = desat(C[cid], 0.15)
     px = Px(30)
     cx = 15
-    hcy = 10
-    head = circle(cx, hcy, 7)
-    body_block(px, cx, 15, 14, 9, c)
-    feet(px, cx, 25, 4, c)
-    arms(px, cx, 17, 8, c)
+    # legs
+    for sx in (cx - 4, cx + 3):
+        px.rect(sx, 22, sx + 1, 26, tint(c, 0.45))
+    # torso: broad shoulders tapering to the belt
+    px.fill(trap(cx, 12, 19, 11, 10), c)
+    px.hline(cx - 5, cx + 5, 21, tint(c, 0.4))  # belt
+    px.vline(cx, 14, 20, tint(c, 0.8))  # chest seam
+    # pauldrons
+    for sx in (cx - 11, cx + 7):
+        px.rect(sx, 11, sx + 4, 14, tint(c, 1.12))
+        px.hline(sx, sx + 4, 15, tint(c, 0.6))
+    # gauntlets
+    for sx in (cx - 10, cx + 8):
+        px.rect(sx, 16, sx + 2, 19, tint(c, 0.7))
+    # head
+    head = circle(cx, 7, 5)
     px.fill(head, SKIN)
-    if hat == "cap":
-        helmet(px, head, hcy - 1, c, crest_c=None)
-        px.hline(cx - 7, cx + 7, hcy - 1, tint(c, 0.7))
-    elif hat == "full":
-        helmet(px, head, hcy + 3, c, cx=cx)
-        px.hline(cx - 4, cx + 4, hcy, DARK)  # visor slit
-        px.dots([(cx - 2, hcy), (cx + 2, hcy)], (170, 255, 190))
-    elif hat == "hood":
-        helmet(px, head, hcy + 1, tint(c, 0.85))
-    elif hat == "wizard":
-        helmet(px, head, hcy - 2, tint(c, 0.9))
-        for i, w in enumerate((5, 4, 3, 2, 1)):
-            px.hline(cx - w, cx + w, hcy - 3 - i, tint(c, 1.0 + i * 0.08))
-    if hat != "full":
-        eyes(px, cx, hcy + 1, 3)
-        mouth(px, cx, hcy + 4)
-    return px, c, cx, hcy
+    return px, c, cx
 
 
 def char_ranger():
-    px, c, cx, hcy = _adventurer("ranger", "cap")
-    px.vline(cx + 9, 12, 20, (120, 90, 60))  # rifle at the side
-    px.dots([(cx + 9, 11)], (220, 230, 255))
-    px.set(cx - 7, hcy - 4, mix(c, WHITE, 0.5))  # cap feather
-    px.set(cx - 8, hcy - 5, mix(c, WHITE, 0.7))
+    px, c, cx = _warrior("ranger")
+    # kettle helm with brim
+    px.paint(lambda x, y: circle(cx, 7, 5)(x, y) and y <= 6, tint(c, 0.95))
+    px.hline(cx - 6, cx + 6, 6, tint(c, 0.62))
+    stern_eyes(px, cx, 8, 2)
+    # long rifle at the right shoulder
+    px.vline(cx + 11, 4, 20, STEEL)
+    px.rect(cx + 10, 17, cx + 12, 20, (110, 82, 56))
+    px.set(cx + 11, 3, PALE)
     px.outline()
     return px
 
 
 def char_blitz():
-    px, c, cx, hcy = _adventurer("blitz", "hood")
-    for sx in (cx - 10, cx + 10):  # twin daggers
-        px.vline(sx, 16, 19, (220, 230, 240))
-        px.set(sx, 20, (120, 90, 60))
-    px.dots([(cx + 6, hcy - 5), (cx + 7, hcy - 6)], (255, 140, 60))  # speed tassel
+    px, c, cx = _warrior("blitz")
+    # deep hood, face in shadow
+    px.paint(lambda x, y: circle(cx, 7, 5)(x, y) and y <= 8, tint(c, 0.8))
+    px.paint(lambda x, y: circle(cx, 8, 3)(x, y) and y >= 7, (44, 38, 30))
+    stern_eyes(px, cx, 8, 2, (255, 236, 170))
+    # twin daggers, angled out
+    for s in (-1, 1):
+        bx = cx + s * 12
+        for i in range(3):
+            px.set(bx + s * i, 19 - i, (214, 222, 234))
+        px.set(bx - s, 20, (110, 82, 56))
     px.outline()
     return px
 
 
 def char_bastion():
-    px, c, cx, hcy = _adventurer("bastion", "full")
-    # tower shield on the left
-    px.rect(cx - 12, 12, cx - 8, 23, tint(c, 1.1))
-    px.rect(cx - 11, 13, cx - 9, 22, tint(c, 0.8))
-    px.dots([(cx - 10, 15), (cx - 10, 19)], mix(c, WHITE, 0.6))
+    px, c, cx = _warrior("bastion")
+    # great helm: full steel, glowing visor slit
+    px.paint(circle(cx, 7, 5), tint(c, 1.02))
+    px.hline(cx - 5, cx + 5, 4, tint(c, 1.18))
+    px.hline(cx - 3, cx + 3, 8, DARK)
+    px.dots([(cx - 2, 8), (cx + 2, 8)], (170, 255, 190))
+    # tower shield, left side
+    px.rect(cx - 14, 9, cx - 9, 24, tint(c, 1.08))
+    px.rect(cx - 13, 10, cx - 10, 23, tint(c, 0.78))
+    for i in range(3):  # chevron
+        px.dots([(cx - 13 + i, 15 + i), (cx - 9 - i + 0, 15 + i)], tint(c, 1.2))
+    # sword, right side
+    px.vline(cx + 12, 8, 19, (214, 222, 234))
+    px.hline(cx + 11, cx + 13, 20, (110, 82, 56))
     px.outline()
     return px
 
 
 def char_jinx():
-    px, c, cx, hcy = _adventurer("jinx", "hood")
-    px.dots([(cx + 9, 18)], (255, 220, 100))  # lucky coin
-    px.dots([(cx + 8, 18), (cx + 10, 18), (cx + 9, 17), (cx + 9, 19)], (200, 160, 60))
-    px.dots([(cx - 3, hcy - 6), (cx + 1, hcy - 7)], mix(c, WHITE, 0.6))  # charm sparks
+    px, c, cx = _warrior("jinx")
+    # wide-brim hat, eyes shadowed beneath
+    px.paint(lambda x, y: circle(cx, 7, 5)(x, y) and y <= 5, tint(c, 0.85))
+    px.hline(cx - 7, cx + 7, 5, tint(c, 0.6))
+    px.rect(cx - 3, 2, cx + 3, 4, tint(c, 0.9))
+    px.paint(lambda x, y: circle(cx, 8, 4)(x, y) and 6 <= y <= 7, (52, 40, 48))
+    stern_eyes(px, cx, 8, 2, (255, 210, 240))
+    # coin in hand + thrown card
+    px.dots([(cx + 10, 17)], (255, 216, 96))
+    px.dots([(cx + 9, 17), (cx + 11, 17), (cx + 10, 16), (cx + 10, 18)], (176, 138, 48))
+    px.rect(cx - 13, 12, cx - 11, 15, PALE)
     px.outline()
     return px
 
 
 def char_volt():
-    px, c, cx, hcy = _adventurer("volt", "wizard")
-    px.vline(cx - 10, 11, 22, (120, 90, 60))  # staff
-    px.dots([(cx - 10, 10)], WHITE)
-    px.dots([(cx - 11, 9), (cx - 9, 9), (cx - 10, 8)], mix(c, WHITE, 0.4))  # orb
-    px.dots([(cx + 3, hcy - 4), (cx + 2, hcy - 3), (cx + 4, hcy - 3)], (255, 255, 170))  # bolt
+    px, c, cx = _warrior("volt")
+    # cowl with mask, only the eyes lit
+    px.paint(lambda x, y: circle(cx, 7, 5)(x, y) and y <= 9, tint(c, 0.78))
+    px.paint(lambda x, y: circle(cx, 8, 3)(x, y) and y >= 7, (36, 44, 52))
+    stern_eyes(px, cx, 8, 2, (170, 250, 255))
+    # arc staff, left: angular crystal
+    px.vline(cx - 12, 6, 21, (110, 82, 56))
+    px.dots([(cx - 12, 4), (cx - 13, 5), (cx - 11, 5), (cx - 12, 5)], mix(c, PALE, 0.5))
+    px.set(cx - 12, 3, PALE)
+    # bolt emblem
+    px.dots([(cx + 1, 15), (cx, 16), (cx + 1, 17), (cx, 18)], (255, 255, 170))
     px.outline()
     return px
 
@@ -314,230 +329,246 @@ def char_volt():
 
 
 def enemy_scrapper():
-    px, c = Px(24), C["scrapper"]
-    body_block(px, 12, 6, 15, 13, c)
-    px.rect(5, 19, 18, 21, tint(c, 0.5))  # treads
-    px.dots([(6, 19), (9, 21), (12, 19), (15, 21), (17, 19)], tint(c, 0.3))
-    cyclops(px, 12, 10)
-    px.vline(12, 2, 4, tint(c, 0.8))  # antenna
-    px.set(12, 1, (255, 230, 150))
-    mouth(px, 12, 15, 4)
-    px.dots([(9, 15), (12, 15), (15, 15)], DARK)  # grill
+    px, c = Px(24), desat(C["scrapper"])
+    px.fill(trap(12, 6, 17, 13, 10), c)  # angular hull
+    px.hline(6, 18, 10, tint(c, 0.55))  # plate seam
+    px.rect(4, 17, 19, 20, tint(c, 0.42))  # tracked base
+    px.dots([(6, 20), (10, 20), (14, 20), (18, 20)], DARK)
+    px.hline(10, 14, 8, DARK)  # single sensor slit
+    px.dots([(12, 8)], (255, 96, 70))
+    px.vline(12, 2, 4, tint(c, 0.7))
+    px.set(12, 1, (255, 120, 80))
     px.outline()
     return px
 
 
 def enemy_sparker():
-    px, c = Px(22), C["sparker"]
-    body_block(px, 11, 7, 11, 10, c)
-    for i, sx in enumerate((7, 11, 15)):  # zigzag crest
-        px.vline(sx, 3 - (i % 2), 5, mix(c, WHITE, 0.5))
-    arms(px, 11, 10, 7, c)
-    eyes(px, 11, 10, 2)
-    mouth(px, 11, 13)
-    px.dots([(11, 18), (8, 17), (14, 17)], tint(c, 0.6))  # hover sparks
+    px, c = Px(22), desat(C["sparker"])
+    px.fill(trap(11, 6, 13, 5, 12), c)  # arc drone, tapering down
+    for sx in (7, 15):  # tesla prongs
+        px.vline(sx, 2, 5, tint(c, 0.7))
+        px.set(sx, 1, PALE)
+    px.set(11, 3, mix(c, PALE, 0.6))  # arc between prongs
+    slit_eyes(px, 11, 9, 3, (255, 240, 160))
+    px.dots([(11, 19), (9, 18), (13, 18)], tint(c, 0.6))  # exhaust
     px.outline()
     return px
 
 
 def enemy_sentry():
-    px, c = Px(24), C["sentry"]
-    px.fill(ellipse(12, 12, 8, 6.5), c)
-    for sx in (5, 12, 19):  # tripod
-        px.vline(sx, 17, 20, tint(c, 0.55))
-        px.set(sx, 21, tint(c, 0.4))
-    cyclops(px, 12, 10, (255, 120, 90))
-    px.vline(12, 15, 17, DARK)  # barrel
-    px.set(12, 18, (255, 200, 120))
+    px, c = Px(24), desat(C["sentry"])
+    px.fill(trap(12, 8, 18, 14, 9), c)  # pillbox
+    px.hline(4, 20, 11, tint(c, 0.55))
+    px.hline(8, 16, 7, DARK)
+    px.dots([(12, 7)], (255, 96, 70))  # targeting slit
+    px.rect(17, 12, 22, 13, tint(c, 0.5))  # side cannon
+    px.set(23, 12, DARK)
+    for sx in (6, 12, 18):  # bolted legs
+        px.vline(sx, 17, 20, tint(c, 0.45))
     px.outline()
     return px
 
 
 def enemy_crusher():
-    px, c = Px(30), C["crusher"]
-    body_block(px, 15, 8, 22, 15, c)  # huge shouldered torso
-    px.fill(circle(15, 7, 5), tint(c, 1.1))  # sunken head
-    px.hline(11, 19, 12, tint(c, 0.65))  # shoulder seam
-    for sx in (3, 27):  # fists
-        px.fill(circle(sx, 18, 3), tint(c, 0.9))
-    cyclops(px, 15, 6, (255, 90, 60))
-    px.dots([(9, 2), (21, 2), (8, 3), (22, 3)], tint(c, 1.3))  # horns
-    feet(px, 15, 24, 5, c)
+    px, c = Px(30), desat(C["crusher"])
+    px.fill(trap(15, 6, 25, 13, 16), c)  # hulking chassis
+    px.hline(4, 26, 10, tint(c, 0.55))  # shoulder seam
+    px.hline(8, 22, 16, tint(c, 0.55))
+    slit_eyes(px, 15, 8, 3, (255, 84, 60))
+    for sx in (3, 24):  # square fists
+        px.rect(sx, 16, sx + 3, 20, tint(c, 0.85))
+        px.hline(sx, sx + 3, 17, tint(c, 1.1))
+    for sx in (9, 19):  # legs
+        px.rect(sx, 23, sx + 2, 26, tint(c, 0.45))
+    px.dots([(8, 3), (22, 3), (7, 4), (23, 4)], tint(c, 1.2))  # antenna horns
     px.outline()
     return px
 
 
 def enemy_forgemaster():
-    px, c = Px(30), C["forgemaster"]
-    body_block(px, 15, 13, 18, 12, c)
-    head = circle(15, 9, 6)
-    px.fill(head, SKIN)
-    helmet(px, head, 9, tint(c, 0.9), cx=15)
-    px.rect(12, 2, 18, 4, tint(c, 0.6))  # anvil crest
-    eyes(px, 15, 10, 2, pupil=(90, 60, 30))
-    px.vline(26, 8, 20, (120, 90, 60))  # hammer
-    px.rect(24, 6, 28, 8, (160, 160, 180))
-    px.dots([(10, 18), (15, 20), (20, 18)], mix(c, (90, 200, 255), 0.5))  # studs
-    feet(px, 15, 25, 5, c)
+    px, c = Px(30), desat(C["forgemaster"])
+    px.fill(trap(15, 11, 21, 13, 11), c)  # plated bulk
+    px.hline(6, 24, 15, tint(c, 0.55))
+    px.dots([(9, 13), (15, 13), (21, 13)], tint(c, 0.5))  # rivets
+    head = circle(15, 7, 4)
+    px.fill(head, tint(c, 1.0))
+    px.rect(11, 1, 19, 3, tint(c, 0.55))  # anvil crest
+    px.hline(12, 18, 8, DARK)
+    px.dots([(13, 8), (17, 8)], (150, 235, 255))  # cold visor glow
+    px.vline(26, 6, 20, (96, 74, 52))  # war hammer
+    px.rect(24, 4, 28, 7, (150, 156, 172))
+    for sx in (11, 18):
+        px.rect(sx, 23, sx + 1, 26, tint(c, 0.45))
     px.outline()
     return px
 
 
 def enemy_sporeling():
-    px, c = Px(24), C["sporeling"]
-    cap = ellipse(12, 8, 10, 6)
-    px.fill(ellipse(12, 15, 6, 6), SKIN)  # face-stem
-    px.fill(cap, c)
-    px.dots([(7, 6), (14, 4), (17, 8)], mix(c, WHITE, 0.55))  # cap spots
-    eyes(px, 12, 15, 3)
-    mouth(px, 12, 18)
-    feet(px, 12, 21, 3, c)
+    px, c = Px(24), desat(C["sporeling"])
+    # drooping, asymmetric cap
+    px.fill(trap(12, 3, 10, 20, 6), c)
+    px.hline(2, 21, 9, tint(c, 0.5))
+    px.dots([(6, 5), (15, 4), (18, 7)], tint(c, 0.55))  # dull spots
+    px.fill(trap(12, 10, 9, 7, 9), mix(SKIN, c, 0.35))  # gnarled stem
+    slit_eyes(px, 12, 14, 2, (190, 255, 130))
+    px.dots([(3, 2), (20, 3), (9, 1)], tint(c, 0.8), 160)  # drifting spores
+    for sx in (9, 14):  # root feet
+        px.rect(sx, 19, sx + 1, 21, tint(c, 0.4))
     px.outline()
     return px
 
 
 def enemy_mite():
-    px, c = Px(16), C["mite"]
-    px.fill(ellipse(8, 9, 5.5, 4.5), c)
-    for sx in (3, 5, 11, 13):  # legs
-        px.set(sx, 13, tint(c, 0.55))
-    px.dots([(5, 3), (11, 3)], tint(c, 1.3))  # antennae
-    px.dots([(5, 4), (11, 4)], tint(c, 0.9))
-    eyes(px, 8, 8, 2)
+    px, c = Px(16), desat(C["mite"])
+    px.fill(trap(8, 5, 11, 8, 7), c)
+    px.dots([(4, 3), (8, 2), (12, 3)], tint(c, 1.2))  # dorsal spikes
+    for sx in (2, 4, 11, 13):
+        px.set(sx, 13, tint(c, 0.5))
+    slit_eyes(px, 8, 8, 2, (255, 96, 70), 1)
     px.outline()
     return px
 
 
 def enemy_croaker():
-    px, c = Px(26), C["croaker"]
-    px.fill(ellipse(13, 15, 10, 7), c)
-    px.fill(ellipse(13, 18, 5, 3), mix(c, WHITE, 0.45))  # belly
-    for (bx) in (7, 19):  # eye bumps
-        px.fill(circle(bx, 7, 3), c)
-    eyes(px, 13, 6, 6)
-    mouth(px, 13, 13, 6)
-    for sx in (4, 22):  # splayed legs
-        px.rect(sx - 1, 20, sx + 1, 22, tint(c, 0.6))
+    px, c = Px(26), desat(C["croaker"])
+    px.fill(trap(13, 8, 20, 16, 12), c)  # war-toad bulk
+    px.hline(4, 22, 7, tint(c, 0.6))  # heavy brow ridge
+    slit_eyes(px, 13, 9, 5, (255, 196, 90))
+    px.hline(9, 17, 15, tint(c, 0.45))  # grim mouth
+    px.dots([(6, 12), (19, 11), (16, 13)], tint(c, 0.6))  # warts
+    for sx in (3, 20):  # haunches
+        px.rect(sx, 16, sx + 2, 21, tint(c, 0.8))
+        px.rect(sx, 21, sx + 3, 22, tint(c, 0.5))
     px.outline()
     return px
 
 
 def enemy_spitter():
-    px, c = Px(26), C["spitter"]
-    px.fill(ellipse(13, 19, 9, 5), tint(c, 0.85))  # coil
-    px.fill(ellipse(13, 9, 7, 6), c)  # hooded head
-    px.dots([(6, 5), (20, 5), (5, 8), (21, 8)], tint(c, 1.25))  # hood tips
-    eyes(px, 13, 8, 3, pupil=(120, 30, 60))
-    px.dots([(11, 13), (15, 13)], WHITE)  # fangs
-    px.dots([(13, 12)], tint(c, 0.5))
+    px, c = Px(26), desat(C["spitter"])
+    px.fill(trap(13, 3, 16, 8, 12), c)  # flared cobra hood
+    px.fill(trap(13, 15, 10, 14, 7), tint(c, 0.8))  # coiled base
+    px.hline(9, 17, 6, tint(c, 0.55))
+    slit_eyes(px, 13, 8, 3, (255, 196, 90))
+    for sx in (11, 15):  # long fangs
+        px.vline(sx, 11, 13, PALE)
+    px.dots([(13, 12)], tint(c, 0.4))
     px.outline()
     return px
 
 
 def enemy_broodmother():
-    px, c = Px(32), C["broodmother"]
-    px.fill(ellipse(16, 14, 13, 9), c)  # dome shell
-    px.dots([(9, 8), (16, 6), (23, 8), (12, 12), (20, 12)], tint(c, 0.65))  # shell spots
-    px.fill(ellipse(16, 23, 8, 4), tint(c, 1.05))  # face band
-    eyes(px, 16, 22, 3)
-    for (ex, ey) in ((7, 26), (16, 28), (25, 26)):  # egg sacs
-        px.fill(circle(ex, ey, 3), mix(c, WHITE, 0.5))
-        px.set(ex, ey - 1, mix(c, WHITE, 0.75))
+    px, c = Px(32), desat(C["broodmother"])
+    # segmented chitin dome
+    px.fill(trap(16, 4, 14, 24, 7), c)
+    px.fill(trap(16, 11, 26, 22, 8), tint(c, 0.92))
+    px.fill(trap(16, 19, 22, 16, 7), tint(c, 0.8))
+    px.dots([(8, 3), (16, 2), (24, 3)], tint(c, 1.2))  # ridge spikes
+    px.hline(5, 27, 11, tint(c, 0.5))
+    px.hline(6, 26, 19, tint(c, 0.5))
+    slit_eyes(px, 16, 15, 4, (216, 255, 140))
+    for (ex, ey) in ((8, 27), (16, 29), (24, 27)):  # dull egg sacs
+        px.fill(circle(ex, ey, 2), mix(c, (70, 80, 60), 0.35))
     px.outline()
     return px
 
 
 def enemy_wisp():
-    px, c = Px(22), C["wisp"]
-    ghost = union(circle(11, 9, 7), ellipse(11, 14, 7, 5))
-    px.glow(ghost, c, 2, 80)
-    px.fill(ghost, c)
-    for i, sx in enumerate((6, 9, 12, 15)):  # wavy tail
-        px.vline(sx, 18, 19 + (i % 2), tint(c, 0.8))
-    eyes(px, 11, 8, 3, pupil=(40, 60, 110))
-    mouth(px, 11, 12)
+    px, c = Px(22), desat(C["wisp"], 0.1)
+    shroud = trap(11, 4, 7, 17, 14)
+    px.glow(shroud, c, 2, 60)
+    px.fill(shroud, c)
+    for i, sx in enumerate((5, 8, 11, 14, 17)):  # tattered hem
+        px.vline(sx, 18, 19 + (i % 2), tint(c, 0.7))
+    px.dots([(8, 9), (14, 9)], (40, 60, 110))  # hollow sockets
+    px.dots([(8, 10), (14, 10)], PALE)
     px.outline((40, 60, 110, 255))
     return px
 
 
 def enemy_blinker():
-    px, c = Px(24), C["blinker"]
-    px.glow(circle(12, 11, 7), c, 2, 70)
-    px.fill(ellipse(12, 11, 8, 7), c)
-    for sx in (2, 22):  # wing nubs
-        px.dots([(sx, 10), (sx + (1 if sx < 12 else -1), 9)], tint(c, 0.85))
-    px.fill(circle(12, 11, 4), WHITE)  # big central eye
-    px.fill(circle(12, 11, 2), (60, 30, 100))
-    px.set(11, 10, WHITE)
-    px.dots([(8, 18), (12, 19), (16, 18)], tint(c, 0.7))  # tail sparks
+    px, c = Px(24), desat(C["blinker"], 0.1)
+    body = trap(12, 6, 18, 8, 12)
+    px.glow(body, c, 2, 60)
+    px.fill(body, c)
+    px.hline(6, 18, 9, tint(c, 0.5))  # eyelid line
+    px.fill(circle(12, 12, 3), (232, 236, 248))  # single eye
+    px.vline(12, 10, 13, (48, 24, 84))  # slit pupil
+    for s in (-1, 1):  # wing barbs
+        px.dots([(12 + s * 10, 7), (12 + s * 11, 5)], tint(c, 0.8))
     px.outline((50, 30, 90, 255))
     return px
 
 
 def enemy_husk():
-    px, c = Px(26), C["husk"]
-    px.fill(ellipse(13, 10, 9, 8), c)  # heavy torso
-    px.rect(6, 18, 10, 22, tint(c, 0.75))  # stumpy legs
-    px.rect(16, 18, 20, 22, tint(c, 0.75))
-    crack = [(13, 3), (12, 5), (13, 7), (14, 9), (13, 11)]
-    px.dots(crack, tint(c, 0.4))
-    px.dots([(9, 9), (17, 9)], (140, 230, 255))  # hollow glowing eyes
-    px.dots([(9, 10), (17, 10)], (60, 120, 160))
+    px, c = Px(26), desat(C["husk"])
+    px.fill(trap(13, 4, 17, 13, 14), c)  # obsidian torso
+    for sx in (7, 15):
+        px.rect(sx, 19, sx + 3, 23, tint(c, 0.6))  # slab legs
+    crack = [(13, 5), (12, 7), (13, 9), (14, 11), (13, 13), (12, 15)]
+    px.dots(crack, tint(c, 0.35))
+    px.dots([(9, 8), (17, 8)], DARK)  # deep sockets
+    px.dots([(9, 9), (17, 9)], (140, 230, 255))
     px.outline()
     return px
 
 
 def enemy_detonant():
-    px, c = Px(26), C["detonant"]
-    px.glow(circle(13, 13, 8), c, 2, 90)
-    px.fill(star(13, 12, 11, 8, 0.55), c)
-    eyes(px, 13, 10, 3, pupil=(120, 20, 60))
-    px.hline(11, 15, 15, DARK)  # gritted mouth
-    px.dots([(12, 15), (14, 15)], WHITE)
-    for sx in (9, 17):  # little legs
-        px.rect(sx - 1, 21, sx, 23, tint(c, 0.6))
-    px.dots([(13, 13)], (255, 230, 150))  # lit core
+    px, c = Px(26), desat(C["detonant"], 0.1)
+    px.glow(circle(13, 12, 8), c, 2, 80)
+    px.fill(star(13, 12, 12, 8, 0.68), c)
+    px.hline(8, 18, 15, tint(c, 0.45))  # hazard band
+    px.dots([(10, 15), (13, 15), (16, 15)], (60, 50, 40))
+    slit_eyes(px, 13, 10, 3, (255, 240, 160))
+    px.dots([(13, 13)], (255, 230, 150))  # armed core
+    for sx in (10, 16):
+        px.rect(sx - 1, 21, sx, 23, tint(c, 0.55))
     px.outline((90, 24, 60, 255))
     return px
 
 
 def enemy_oracle():
-    px, c = Px(26), C["oracle"]
-    robe = union(ellipse(13, 16, 8, 7), circle(13, 8, 5))
-    px.glow(robe, c, 2, 70)
+    px, c = Px(26), desat(C["oracle"], 0.1)
+    robe = trap(13, 3, 9, 19, 20)
+    px.glow(robe, c, 2, 55)
     px.fill(robe, c)
-    px.fill(circle(13, 8, 4), tint(c, 0.5))  # hood shadow
-    px.fill(circle(13, 8, 2), WHITE)  # single seer eye
-    px.set(13, 8, (30, 40, 90))
-    for (hx, hy) in ((5, 3), (13, 1), (21, 3)):  # halo dots
-        px.set(hx, hy, mix(c, WHITE, 0.6))
-    px.hline(9, 17, 22, tint(c, 0.7))  # ragged hem
-    px.dots([(9, 23), (13, 23), (17, 23)], tint(c, 0.55))
+    px.dots([(7, 8), (19, 8)], tint(c, 1.15))  # shoulder points
+    px.paint(lambda x, y: trap(13, 4, 7, 9, 6)(x, y) and y >= 5, (24, 28, 48))  # hood void
+    px.dots([(13, 8)], (200, 230, 255))  # single seer light
+    px.hline(9, 17, 17, tint(c, 0.6))  # rope belt
+    for sx in (8, 13, 18):  # ragged hem
+        px.vline(sx, 22, 23, tint(c, 0.6))
+    px.dots([(3, 6), (23, 6)], mix(c, PALE, 0.5))  # floating runes
     px.outline((40, 50, 100, 255))
     return px
 
 
 def boss_sprite():
-    px, c = Px(56), C["boss"]
-    px.glow(circle(28, 28, 20), c, 3, 55)
-    body_block(px, 28, 20, 38, 26, c)  # armored bulk
-    head = circle(28, 14, 9)
-    px.fill(head, tint(c, 1.08))
-    helmet(px, head, 13, tint(c, 0.8), cx=28)
-    px.dots([(16, 4), (40, 4), (15, 6), (41, 6), (28, 2), (28, 3)], tint(c, 1.35))  # crown horns
-    eyes(px, 28, 15, 5, pupil=(255, 90, 90), wide=True)
-    mouth(px, 28, 20, 6)
-    px.dots([(25, 20), (28, 21), (31, 20)], WHITE)  # teeth
-    for sx in (7, 49):  # claw fists
-        px.fill(circle(sx, 34, 5), tint(c, 0.9))
-        px.dots([(sx - 2, 31), (sx, 30), (sx + 2, 31)], tint(c, 1.3))
-    for (x, y) in px.mask_pixels(circle(28, 32, 4)):  # chest core
-        px.set(x, y, mix(c, WHITE, 0.55))
-    px.set(28, 31, WHITE)
-    for y in (40, 44):  # plating
-        for x in range(18, 39, 4):
-            px.set(x, y, tint(c, 0.55))
-    feet(px, 28, 46, 8, c)
+    px, c = Px(56), desat(C["boss"], 0.12)
+    px.glow(circle(28, 28, 20), c, 3, 50)
+    px.fill(trap(28, 18, 44, 22, 28), c)  # warlord bulk
+    px.hline(10, 46, 26, tint(c, 0.55))  # plate lines
+    px.hline(14, 42, 34, tint(c, 0.55))
+    for sx in (6, 44):  # spiked pauldrons
+        px.rect(sx, 16, sx + 6, 21, tint(c, 1.1))
+        px.dots([(sx + 1, 15), (sx + 4, 14)], tint(c, 1.25))
+    head = trap(28, 6, 16, 12, 10)
+    px.fill(head, tint(c, 1.05))
+    px.paint(lambda x, y: trap(28, 9, 12, 9, 6)(x, y), (30, 22, 44))  # skull shadow
+    slit_eyes(px, 28, 11, 3, (255, 84, 84), 3)
+    for i, tx in enumerate(range(24, 33, 2)):  # jagged jaw
+        px.set(tx, 14 + (i % 2), PALE)
+    for s in (-1, 1):  # tall stepped horns
+        hx = 28 + s * 10
+        px.vline(hx, 2, 6, tint(c, 1.2))
+        px.vline(hx + s * 2, 0, 3, tint(c, 1.35))
+    for sx in (4, 47):  # clawed fists
+        px.rect(sx, 36, sx + 4, 41, tint(c, 0.85))
+        px.dots([(sx, 35), (sx + 2, 34), (sx + 4, 35)], PALE)
+    for (x, y) in px.mask_pixels(trap(28, 30, 6, 6, 6)):  # chest core
+        px.set(x, y, mix(c, PALE, 0.5))
+    px.set(28, 31, PALE)
+    for sx in (20, 33):
+        px.rect(sx, 46, sx + 3, 50, tint(c, 0.5))  # legs
     px.outline((36, 20, 60, 255))
     return px
 
@@ -549,7 +580,7 @@ def bullet(c):
     px = Px(12)
     px.glow(circle(6, 6, 3), c, 2, 110)
     px.fill(circle(6, 6, 4), c)
-    px.dots([(5, 5)], WHITE)
+    px.dots([(5, 5)], PALE)
     px.outline(tuple(tint(c, 0.3)) + (255,))
     return px
 
