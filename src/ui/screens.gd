@@ -166,19 +166,21 @@ func show_title() -> void:
 	)
 	_spacer(box, 8)
 
-	var chars := HBoxContainer.new()
-	chars.add_theme_constant_override("separation", 10)
-	chars.alignment = BoxContainer.ALIGNMENT_CENTER
+	var chars := GridContainer.new()
+	chars.columns = 3
+	chars.add_theme_constant_override("h_separation", 8)
+	chars.add_theme_constant_override("v_separation", 8)
 	box.add_child(chars)
 	for char_id: String in BalanceS.CHARACTERS:
 		var cfg: Dictionary = BalanceS.CHARACTERS[char_id]
 		var available: bool = Meta.character_available(char_id)
 		var selected: bool = Meta.selected_character == char_id
 		var border := Color(1.0, 0.84, 0.3) if selected else Color(0.3, 0.42, 0.65)
-		var text: String = cfg["name"] if available else "%s (locked)" % cfg["name"]
-		var b := _button(text, 15, border)
+		var text: String = cfg["name"] if available else "%s [locked]" % cfg["name"]
+		var b := _button(text, 13, border)
 		b.disabled = not available
-		b.custom_minimum_size = Vector2(150, 0)
+		b.custom_minimum_size = Vector2(122, 0)
+		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		b.pressed.connect(_on_char_pressed.bind(char_id))
 		chars.add_child(b)
 	var sel_cfg: Dictionary = BalanceS.CHARACTERS.get(
@@ -230,7 +232,8 @@ func _on_wipe_pressed(btn: Button) -> void:
 # ---------------------------------------------------------------- upgrades
 
 
-func show_upgrades(offer: Array, balls: int, reroll_cost: int) -> void:
+func show_upgrades(offer: Array, run_ref, reroll_cost: int) -> void:
+	var balls: int = run_ref.balls
 	var box: VBoxContainer = _boxes["upgrade"]
 	_clear(box)
 	box.add_child(_label("CHOOSE 1 UPGRADE", 24, Color(1.0, 0.84, 0.3)))
@@ -240,7 +243,14 @@ func show_upgrades(offer: Array, balls: int, reroll_cost: int) -> void:
 		var cat := str(def["cat"])
 		var cat_color: Color = CAT_COLORS.get(cat, Color.WHITE)
 		var cat_name: String = UpgradePoolS.CATEGORY_NAMES.get(cat, cat.to_upper())
-		var b := _button("%s\n%s\n[%s]" % [def["name"], def["desc"], cat_name], 15, cat_color)
+		# Hint that this pick completes a synergy pair — without revealing
+		# whether it helps or hurts. Commit to find out.
+		var hint := ""
+		if UpgradePoolS.would_synergize(run_ref, str(def["id"])):
+			hint = "\n◆ SYNERGY?"
+		var b := _button(
+			"%s\n%s\n[%s]%s" % [def["name"], def["desc"], cat_name, hint], 15, cat_color
+		)
 		b.custom_minimum_size = Vector2(0, 88)
 		b.pressed.connect(func() -> void: upgrade_chosen.emit(str(def["id"])))
 		box.add_child(b)

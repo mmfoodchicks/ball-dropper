@@ -24,9 +24,11 @@ var fails := 0
 
 func _init() -> void:
 	_test_balance()
+	_test_content()
 	_test_boards()
 	_test_physics()
 	_test_upgrades()
+	_test_synergies()
 	_test_meta()
 	print("SMOKE: %d checks, %d failures" % [checks, fails])
 	quit(1 if fails > 0 else 0)
@@ -43,8 +45,14 @@ func _check(cond: bool, msg: String) -> void:
 
 
 func _test_balance() -> void:
-	_check(BalanceS.peon_hp(10) > BalanceS.peon_hp(1), "peon hp scales with wave")
-	_check(BalanceS.brute_hp(10) > BalanceS.brute_hp(1), "brute hp scales with wave")
+	_check(
+		BalanceS.enemy_hp("scrapper", 10) > BalanceS.enemy_hp("scrapper", 1),
+		"peon hp scales with wave"
+	)
+	_check(
+		BalanceS.enemy_hp("crusher", 10) > BalanceS.enemy_hp("crusher", 1),
+		"elite hp scales with wave"
+	)
 	_check(BalanceS.peon_count(14) > BalanceS.peon_count(1), "peon count scales")
 	_check(BalanceS.elite_count(1) == 1, "wave 1 has one elite (first dropper is funded)")
 	_check(BalanceS.elite_count(15) == 0, "boss wave has no regular elites")
@@ -89,6 +97,50 @@ func _test_balance() -> void:
 			BalanceS.meta_cost(def, 3) > BalanceS.meta_cost(def, 0),
 			"meta cost grows: %s" % def["id"]
 		)
+
+
+# ---------------------------------------------------------------- content
+
+
+func _test_content() -> void:
+	# Biomes reference real enemy kinds of the right class.
+	_check(BalanceS.BIOMES.size() >= 3, "3+ biomes")
+	for biome_id: String in BalanceS.BIOMES:
+		var biome: Dictionary = BalanceS.BIOMES[biome_id]
+		_check(biome["peons"].size() >= 3, "%s has 3+ peon kinds" % biome_id)
+		_check(biome["elites"].size() >= 2, "%s has 2+ elite kinds" % biome_id)
+		for k in biome["peons"]:
+			_check(BalanceS.ENEMY_KINDS.has(k), "%s: peon kind exists: %s" % [biome_id, k])
+			_check(BalanceS.ENEMY_KINDS[k]["class"] == "peon", "%s is peon-class" % k)
+		for k in biome["elites"]:
+			_check(BalanceS.ENEMY_KINDS.has(k), "%s: elite kind exists: %s" % [biome_id, k])
+			_check(BalanceS.ENEMY_KINDS[k]["class"] == "elite", "%s is elite-class" % k)
+	_check(BalanceS.ENEMY_KINDS.size() >= 15, "15+ enemy kinds")
+	for kind: String in BalanceS.ENEMY_KINDS:
+		var d: Dictionary = BalanceS.ENEMY_KINDS[kind]
+		_check(d["class"] == "peon" or d["class"] == "elite", "class valid: %s" % kind)
+		_check(BalanceS.enemy_hp(kind, 10) > BalanceS.enemy_hp(kind, 1), "hp scales: %s" % kind)
+		for c in d.get("split_into", []):
+			_check(BalanceS.ENEMY_KINDS.has(c), "split child exists: %s" % c)
+		if d.has("spawn_kind"):
+			_check(BalanceS.ENEMY_KINDS.has(d["spawn_kind"]), "spawn child exists: %s" % kind)
+
+	# Characters and their unlocks.
+	_check(BalanceS.CHARACTERS.size() >= 5, "5+ playable characters")
+	var unlock_ids := {}
+	for u: Dictionary in BalanceS.META_UNLOCKS:
+		unlock_ids[u["id"]] = true
+	for cid: String in BalanceS.CHARACTERS:
+		var req: String = BalanceS.CHARACTERS[cid]["unlock"]
+		_check(req == "" or unlock_ids.has(req), "character unlock purchasable: %s" % cid)
+	var volt = RunStateS.build("volt", {}, {})
+	_check(volt.pierce == 1, "volt innate pierce")
+	var bastion = RunStateS.build("bastion", {}, {})
+	_check(bastion.dmg_taken_mult < 1.0, "bastion innate armor")
+	var any_run = RunStateS.build("ranger", {}, {})
+	_check(any_run.biomes.size() == BalanceS.BIOMES.size(), "run gets a full biome order")
+	for b in any_run.biomes:
+		_check(BalanceS.BIOMES.has(b), "run biome exists: %s" % b)
 
 
 # ---------------------------------------------------------------- boards
@@ -281,6 +333,56 @@ func _test_upgrades() -> void:
 			_check(id != "multishot", "capped stack not re-offered")
 		if fails > 0:
 			break
+
+
+# ---------------------------------------------------------------- synergies
+
+
+func _test_synergies() -> void:
+	_check(UpgradePoolS.POOL.size() >= 34, "pool has 34+ upgrades (%d)" % UpgradePoolS.POOL.size())
+	var ids := {}
+	for def: Dictionary in UpgradePoolS.POOL:
+		ids[def["id"]] = true
+	var names := {}
+	var goods := 0
+	var bads := 0
+	for rule: Dictionary in UpgradePoolS.SYNERGIES:
+		_check(ids.has(rule["a"]), "synergy '%s': a exists" % rule["id"])
+		_check(ids.has(rule["b"]), "synergy '%s': b exists" % rule["id"])
+		_check(rule["a"] != rule["b"], "synergy '%s': not a self-pair" % rule["id"])
+		_check(not names.has(rule["name"]), "synergy names unique: %s" % rule["name"])
+		names[rule["name"]] = true
+		if rule["good"]:
+			goods += 1
+		else:
+			bads += 1
+	_check(goods >= 6 and bads >= 6, "both polarities present (%d good / %d bad)" % [goods, bads])
+
+	# Completing a pair triggers exactly once and applies its effect.
+	var run = RunStateS.build("ranger", {}, {})
+	var t1: Array = UpgradePoolS.apply(run, "multishot")
+	_check(t1.is_empty(), "no synergy on first pick")
+	var before: int = run.projectiles
+	var t2: Array = UpgradePoolS.apply(run, "flak")
+	_check(t2.size() == 1 and t2[0]["id"] == "bullet_storm", "bullet storm triggers")
+	_check(run.projectiles == before + 3, "flak +2 plus synergy +1 projectiles")
+	_check(run.synergies.size() == 1, "synergy recorded on the run")
+	var t3: Array = UpgradePoolS.apply(run, "multishot")
+	_check(t3.is_empty(), "synergy never retriggers")
+
+	# Negative polarity path.
+	var run2 = RunStateS.build("ranger", {}, {})
+	UpgradePoolS.apply(run2, "titan_frame")
+	var spd: float = run2.move_speed
+	var t4: Array = UpgradePoolS.apply(run2, "swift")
+	_check(t4.size() == 1 and not t4[0]["good"], "bulky (negative) triggers")
+	_check(run2.move_speed < spd * 1.12, "bulky dampens swift boots")
+
+	# Offer hint.
+	var run3 = RunStateS.build("ranger", {}, {})
+	UpgradePoolS.apply(run3, "pierce")
+	_check(UpgradePoolS.would_synergize(run3, "ricochet"), "hint detects completing pick")
+	_check(not UpgradePoolS.would_synergize(run3, "vitality"), "no false hint")
 
 
 # ---------------------------------------------------------------- meta save

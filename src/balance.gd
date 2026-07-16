@@ -33,6 +33,7 @@ const CHARACTERS := {
 		"fire_rate": 3.0,
 		"crit": 0.05,
 		"unlock": "",
+		"innate": {},
 	},
 	"blitz":
 	{
@@ -44,6 +45,270 @@ const CHARACTERS := {
 		"fire_rate": 5.5,
 		"crit": 0.08,
 		"unlock": "char_blitz",
+		"innate": {},
+	},
+	"bastion":
+	{
+		"name": "BASTION",
+		"blurb": "Slow, armored, hits like a truck.",
+		"hp": 145.0,
+		"speed": 148.0,
+		"dmg": 14.0,
+		"fire_rate": 2.2,
+		"crit": 0.04,
+		"unlock": "char_bastion",
+		"innate": {"dmg_taken_mult": 0.88},
+	},
+	"jinx":
+	{
+		"name": "JINX",
+		"blurb": "Crit-happy gambler. Gates love her.",
+		"hp": 85.0,
+		"speed": 172.0,
+		"dmg": 9.0,
+		"fire_rate": 3.2,
+		"crit": 0.15,
+		"unlock": "char_jinx",
+		"innate": {"lucky_gates": 1, "golden_touch": 0.1},
+	},
+	"volt":
+	{
+		"name": "VOLT",
+		"blurb": "Innate piercing arc rounds.",
+		"hp": 95.0,
+		"speed": 165.0,
+		"dmg": 11.0,
+		"fire_rate": 2.6,
+		"crit": 0.06,
+		"unlock": "char_volt",
+		"innate": {"pierce": 1},
+	},
+}
+
+# ---------------------------------------------------------------- biomes
+
+## One biome per 5-wave segment; the order is shuffled per run. Each biome
+## themes the arena and defines which enemy kinds its waves cycle through.
+const BIOMES := {
+	"foundry":
+	{
+		"name": "THE FOUNDRY",
+		"tint": Color(1.0, 0.62, 0.3),
+		"bg": Color(0.075, 0.055, 0.045),
+		"peons": ["scrapper", "sparker", "sentry"],
+		"elites": ["crusher", "forgemaster"],
+	},
+	"mire":
+	{
+		"name": "THE MIRE",
+		"tint": Color(0.55, 0.92, 0.45),
+		"bg": Color(0.045, 0.075, 0.05),
+		"peons": ["sporeling", "croaker", "mite"],
+		"elites": ["spitter", "broodmother"],
+	},
+	"void":
+	{
+		"name": "THE VOID",
+		"tint": Color(0.62, 0.55, 1.0),
+		"bg": Color(0.055, 0.05, 0.095),
+		"peons": ["wisp", "blinker", "husk"],
+		"elites": ["detonant", "oracle"],
+	},
+}
+
+## Enemy roster. "class" peon|elite decides ball drops and scaling curve;
+## "behavior" picks the AI: chase, weave, hop, turret, blink, charge,
+## orbit_ranged, burst_ranged, spawner, shieldcycle, exploder.
+const ENEMY_KINDS := {
+	# -------- foundry (mechanical)
+	"scrapper":
+	{
+		"class": "peon",
+		"behavior": "chase",
+		"hp": 8.0,
+		"speed": 58.0,
+		"dmg": 6.0,
+		"radius": 10.0,
+		"shape": "circle",
+		"color": Color(1.0, 0.45, 0.3),
+	},
+	"sparker":
+	{
+		"class": "peon",
+		"behavior": "weave",
+		"hp": 6.0,
+		"speed": 74.0,
+		"dmg": 5.0,
+		"radius": 8.0,
+		"shape": "triangle",
+		"color": Color(1.0, 0.8, 0.3),
+	},
+	"sentry":
+	{
+		"class": "peon",
+		"behavior": "turret",
+		"hp": 14.0,
+		"speed": 12.0,
+		"dmg": 4.0,
+		"radius": 11.0,
+		"shape": "square",
+		"color": Color(0.95, 0.55, 0.25),
+		"shot_dmg": 6.0,
+		"shot_interval": 2.6,
+		"burst": 2,
+	},
+	"crusher":
+	{
+		"class": "elite",
+		"behavior": "charge",
+		"hp": 70.0,
+		"speed": 46.0,
+		"dmg": 12.0,
+		"radius": 16.0,
+		"shape": "hex",
+		"color": Color(1.0, 0.6, 0.25),
+	},
+	"forgemaster":
+	{
+		"class": "elite",
+		"behavior": "shieldcycle",
+		"hp": 85.0,
+		"speed": 40.0,
+		"dmg": 14.0,
+		"radius": 17.0,
+		"shape": "hex",
+		"color": Color(0.85, 0.75, 0.65),
+		"shield_on": 1.8,
+		"shield_off": 3.2,
+	},
+	# -------- mire (organic)
+	"sporeling":
+	{
+		"class": "peon",
+		"behavior": "chase",
+		"hp": 9.0,
+		"speed": 55.0,
+		"dmg": 6.0,
+		"radius": 10.0,
+		"shape": "circle",
+		"color": Color(0.55, 0.9, 0.4),
+		"split_into": ["mite", "mite"],
+	},
+	"mite":
+	{
+		"class": "peon",
+		"behavior": "chase",
+		"hp": 3.0,
+		"speed": 95.0,
+		"dmg": 3.0,
+		"radius": 6.0,
+		"shape": "circle",
+		"color": Color(0.7, 1.0, 0.55),
+	},
+	"croaker":
+	{
+		"class": "peon",
+		"behavior": "hop",
+		"hp": 10.0,
+		"speed": 210.0,
+		"dmg": 7.0,
+		"radius": 11.0,
+		"shape": "circle",
+		"color": Color(0.35, 0.7, 0.35),
+		"hop_time": 0.45,
+		"rest_time": 0.75,
+	},
+	"spitter":
+	{
+		"class": "elite",
+		"behavior": "orbit_ranged",
+		"hp": 55.0,
+		"speed": 55.0,
+		"dmg": 8.0,
+		"radius": 13.0,
+		"shape": "diamond",
+		"color": Color(0.7, 0.55, 0.95),
+		"shot_dmg": 8.0,
+		"shot_interval": 1.9,
+		"burst": 1,
+	},
+	"broodmother":
+	{
+		"class": "elite",
+		"behavior": "spawner",
+		"hp": 95.0,
+		"speed": 30.0,
+		"dmg": 10.0,
+		"radius": 18.0,
+		"shape": "hex",
+		"color": Color(0.5, 0.8, 0.35),
+		"spawn_kind": "mite",
+		"spawn_count": 2,
+		"spawn_interval": 5.0,
+	},
+	# -------- void (cosmic)
+	"wisp":
+	{
+		"class": "peon",
+		"behavior": "weave",
+		"hp": 6.0,
+		"speed": 68.0,
+		"dmg": 5.0,
+		"radius": 8.0,
+		"shape": "circle",
+		"color": Color(0.6, 0.8, 1.0),
+	},
+	"blinker":
+	{
+		"class": "peon",
+		"behavior": "blink",
+		"hp": 8.0,
+		"speed": 30.0,
+		"dmg": 6.0,
+		"radius": 9.0,
+		"shape": "diamond",
+		"color": Color(0.75, 0.55, 1.0),
+		"blink_interval": 2.2,
+		"blink_range": 90.0,
+	},
+	"husk":
+	{
+		"class": "peon",
+		"behavior": "chase",
+		"hp": 18.0,
+		"speed": 40.0,
+		"dmg": 8.0,
+		"radius": 12.0,
+		"shape": "square",
+		"color": Color(0.45, 0.4, 0.7),
+	},
+	"detonant":
+	{
+		"class": "elite",
+		"behavior": "exploder",
+		"hp": 60.0,
+		"speed": 75.0,
+		"dmg": 22.0,
+		"radius": 14.0,
+		"shape": "spike",
+		"color": Color(1.0, 0.4, 0.75),
+		"fuse_range": 70.0,
+		"fuse_time": 0.8,
+		"blast_radius": 90.0,
+	},
+	"oracle":
+	{
+		"class": "elite",
+		"behavior": "burst_ranged",
+		"hp": 70.0,
+		"speed": 50.0,
+		"dmg": 8.0,
+		"radius": 14.0,
+		"shape": "diamond",
+		"color": Color(0.5, 0.7, 1.0),
+		"shot_dmg": 8.0,
+		"shot_interval": 2.4,
+		"burst": 3,
 	},
 }
 
@@ -53,7 +318,6 @@ const BULLET_RADIUS := 4.0
 const HERO_RADIUS := 12.0
 const HERO_IFRAMES := 0.35
 const CONTACT_COOLDOWN := 0.8
-const SECOND_WIND_HP_FRAC := 0.3
 
 # ---------------------------------------------------------------- enemies
 
@@ -68,24 +332,27 @@ static func elite_count(wave: int) -> int:
 	return mini(6, 1 + int(floor((wave - 1) / 3.0)))
 
 
-static func peon_hp(wave: int) -> float:
-	return 8.0 * (1.0 + 0.26 * (wave - 1))
+static func enemy_def(kind: String) -> Dictionary:
+	return ENEMY_KINDS.get(kind, ENEMY_KINDS["scrapper"])
 
 
-static func peon_speed(wave: int) -> float:
-	return minf(105.0, 58.0 + 1.8 * wave)
+static func enemy_hp(kind: String, wave: int) -> float:
+	var def := enemy_def(kind)
+	var growth := 0.32 if def["class"] == "elite" else 0.26
+	return float(def["hp"]) * (1.0 + growth * (wave - 1))
 
 
-static func brute_hp(wave: int) -> float:
-	return 70.0 * (1.0 + 0.32 * (wave - 1))
+static func enemy_speed_scale(wave: int) -> float:
+	return minf(1.45, 1.0 + 0.03 * (wave - 1))
 
 
-static func spitter_hp(wave: int) -> float:
-	return 55.0 * (1.0 + 0.30 * (wave - 1))
+static func enemy_shot_dmg(kind: String, wave: int) -> float:
+	return float(enemy_def(kind).get("shot_dmg", 8.0)) + 0.5 * wave
 
 
-static func spitter_shot_dmg(wave: int) -> float:
-	return 8.0 + 0.5 * wave
+static func biome_for_wave(biomes: Array, wave: int) -> Dictionary:
+	var idx := clampi(int(floor((wave - 1) / 5.0)), 0, biomes.size() - 1)
+	return BIOMES.get(biomes[idx], BIOMES["foundry"])
 
 
 const PEON_DMG := 6.0
@@ -248,6 +515,24 @@ const META_UNLOCKS := [
 		"name": "Unlock BLITZ",
 		"desc": "New playable character: fast, fragile, bullet hose",
 		"cost": 8,
+	},
+	{
+		"id": "char_bastion",
+		"name": "Unlock BASTION",
+		"desc": "New playable character: armored juggernaut",
+		"cost": 6,
+	},
+	{
+		"id": "char_jinx",
+		"name": "Unlock JINX",
+		"desc": "New playable character: crits, luck and gold",
+		"cost": 7,
+	},
+	{
+		"id": "char_volt",
+		"name": "Unlock VOLT",
+		"desc": "New playable character: innate piercing shots",
+		"cost": 9,
 	},
 ]
 

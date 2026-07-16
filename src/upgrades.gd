@@ -55,6 +55,46 @@ const POOL := [
 		"weight": 8,
 		"max_stacks": 2,
 	},
+	{
+		"id": "ricochet",
+		"name": "Ricochet",
+		"desc": "Bullets bounce off walls once",
+		"cat": "weapon",
+		"weight": 7,
+		"max_stacks": 1,
+	},
+	{
+		"id": "splitshot",
+		"name": "Splitshot",
+		"desc": "Hits burst into two weak shards",
+		"cat": "weapon",
+		"weight": 6,
+		"max_stacks": 1,
+	},
+	{
+		"id": "cannonball",
+		"name": "Cannonball",
+		"desc": "+60% damage, -25% fire rate, slower shots",
+		"cat": "weapon",
+		"weight": 7,
+		"max_stacks": 0,
+	},
+	{
+		"id": "hollow_points",
+		"name": "Hollow Points",
+		"desc": "+30% damage to full-health enemies",
+		"cat": "weapon",
+		"weight": 7,
+		"max_stacks": 1,
+	},
+	{
+		"id": "flak",
+		"name": "Flak Loader",
+		"desc": "+2 projectiles, -30% damage",
+		"cat": "weapon",
+		"weight": 5,
+		"max_stacks": 2,
+	},
 	# -------- passive stat boosts
 	{
 		"id": "vitality",
@@ -88,6 +128,30 @@ const POOL := [
 		"weight": 8,
 		"max_stacks": 0,
 	},
+	{
+		"id": "glass_cannon",
+		"name": "Glass Cannon",
+		"desc": "+50% damage, -30% max HP",
+		"cat": "passive",
+		"weight": 5,
+		"max_stacks": 1,
+	},
+	{
+		"id": "titan_frame",
+		"name": "Titan Frame",
+		"desc": "+40 max HP, -8% move speed",
+		"cat": "passive",
+		"weight": 7,
+		"max_stacks": 0,
+	},
+	{
+		"id": "overclock",
+		"name": "Overclock",
+		"desc": "+25% fire rate, take +10% damage",
+		"cat": "passive",
+		"weight": 6,
+		"max_stacks": 2,
+	},
 	# -------- utility abilities
 	{
 		"id": "regen",
@@ -111,6 +175,30 @@ const POOL := [
 		"desc": "Revive once per run at 30% HP",
 		"cat": "utility",
 		"weight": 4,
+		"max_stacks": 1,
+	},
+	{
+		"id": "thorns",
+		"name": "Thorns",
+		"desc": "Attackers take 15 damage on contact",
+		"cat": "utility",
+		"weight": 7,
+		"max_stacks": 2,
+	},
+	{
+		"id": "static_field",
+		"name": "Static Field",
+		"desc": "Nearby enemies move 25% slower",
+		"cat": "utility",
+		"weight": 6,
+		"max_stacks": 1,
+	},
+	{
+		"id": "kinetic_shield",
+		"name": "Kinetic Shield",
+		"desc": "Block one hit every 4s undamaged",
+		"cat": "utility",
+		"weight": 5,
 		"max_stacks": 1,
 	},
 	# -------- dropper modifiers
@@ -154,6 +242,30 @@ const POOL := [
 		"weight": 6,
 		"max_stacks": 2,
 	},
+	{
+		"id": "heavy_balls",
+		"name": "Heavy Balls",
+		"desc": "Balls fall faster and bounce less",
+		"cat": "dropper",
+		"weight": 5,
+		"max_stacks": 1,
+	},
+	{
+		"id": "rubber_balls",
+		"name": "Rubber Balls",
+		"desc": "Balls bounce wildly off everything",
+		"cat": "dropper",
+		"weight": 5,
+		"max_stacks": 1,
+	},
+	{
+		"id": "magnet_gates",
+		"name": "Magnet Gates",
+		"desc": "Gates pull nearby balls toward them",
+		"cat": "dropper",
+		"weight": 5,
+		"max_stacks": 2,
+	},
 	# -------- synergy-based
 	{
 		"id": "frenzy",
@@ -188,6 +300,142 @@ const CATEGORY_NAMES := {
 	"dropper": "DROPPER",
 	"synergy": "SYNERGY",
 }
+
+## Isaac-style pairwise interactions: owning both upgrades triggers a hidden
+## bonus (good) or drawback (bad) the moment the pair completes. Offer cards
+## only hint "◆ SYNERGY?" — polarity is discovered by committing.
+const SYNERGIES := [
+	# -------- positive
+	{
+		"id": "bullet_storm",
+		"a": "multishot",
+		"b": "flak",
+		"good": true,
+		"name": "BULLET STORM",
+		"desc": "+1 extra projectile",
+	},
+	{
+		"id": "pinball",
+		"a": "pierce",
+		"b": "ricochet",
+		"good": true,
+		"name": "PINBALL WIZARD",
+		"desc": "+1 extra pierce",
+	},
+	{
+		"id": "overdrive",
+		"a": "frenzy",
+		"b": "adrenaline",
+		"good": true,
+		"name": "OVERDRIVE",
+		"desc": "Frenzy lasts 7s",
+	},
+	{
+		"id": "siege",
+		"a": "heavy",
+		"b": "cannonball",
+		"good": true,
+		"name": "SIEGE MODE",
+		"desc": "+20% more damage",
+	},
+	{
+		"id": "deadeye",
+		"a": "sharpshooter",
+		"b": "glass_cannon",
+		"good": true,
+		"name": "DEADEYE",
+		"desc": "+12% crit chance",
+	},
+	{
+		"id": "cull",
+		"a": "hollow_points",
+		"b": "executioner",
+		"good": true,
+		"name": "CULL THE STRONG",
+		"desc": "Elites take +50% damage",
+	},
+	{
+		"id": "iron_maiden",
+		"a": "thorns",
+		"b": "bulwark",
+		"good": true,
+		"name": "IRON MAIDEN",
+		"desc": "Thorns damage doubled",
+	},
+	{
+		"id": "jackpot",
+		"a": "lucky",
+		"b": "rubber_balls",
+		"good": true,
+		"name": "JACKPOT PHYSICS",
+		"desc": "??? gate on every board",
+	},
+	# -------- negative
+	{
+		"id": "jammed",
+		"a": "cannonball",
+		"b": "rapid",
+		"good": false,
+		"name": "JAMMED MECHANISM",
+		"desc": "-10% fire rate",
+	},
+	{
+		"id": "fragile_hope",
+		"a": "glass_cannon",
+		"b": "second_wind",
+		"good": false,
+		"name": "FRAGILE HOPE",
+		"desc": "Revive at 15% HP instead",
+	},
+	{
+		"id": "confused_physics",
+		"a": "heavy_balls",
+		"b": "rubber_balls",
+		"good": false,
+		"name": "CONFUSED PHYSICS",
+		"desc": "Both ball mods weakened",
+	},
+	{
+		"id": "shrapnel_chaos",
+		"a": "ricochet",
+		"b": "splitshot",
+		"good": false,
+		"name": "SHRAPNEL CHAOS",
+		"desc": "-10% damage",
+	},
+	{
+		"id": "overheat",
+		"a": "overclock",
+		"b": "adrenaline",
+		"good": false,
+		"name": "OVERHEAT",
+		"desc": "Take +8% more damage",
+	},
+	{
+		"id": "power_drain",
+		"a": "static_field",
+		"b": "frenzy",
+		"good": false,
+		"name": "POWER DRAIN",
+		"desc": "Frenzy bonus weakened",
+	},
+	{
+		"id": "bulky",
+		"a": "titan_frame",
+		"b": "swift",
+		"good": false,
+		"name": "BULKY",
+		"desc": "-6% move speed",
+	},
+	{
+		"id": "polarity_clash",
+		"a": "magnet_gates",
+		"b": "hacker",
+		"good": false,
+		"name": "POLARITY CLASH",
+		"desc": "Magnet pull halved",
+	},
+]
 
 
 static func find(id: String) -> Dictionary:
@@ -238,8 +486,84 @@ static func roll_offer(rng: RandomNumberGenerator, run, count: int) -> Array:
 	return offer
 
 
-static func apply(run, id: String) -> void:
+static func would_synergize(run, id: String) -> bool:
+	## True if picking `id` would complete any not-yet-triggered synergy pair.
+	for rule: Dictionary in SYNERGIES:
+		var a := str(rule["a"])
+		var b := str(rule["b"])
+		var completes: bool = (
+			(id == a and b in run.picked_upgrades) or (id == b and a in run.picked_upgrades)
+		)
+		if completes and not _synergy_tag(rule) in run.synergies:
+			return true
+	return false
+
+
+static func _synergy_tag(rule: Dictionary) -> String:
+	return ("+" if rule["good"] else "-") + str(rule["name"])
+
+
+static func apply(run, id: String) -> Array:
+	## Applies the upgrade, then resolves any synergy pairs it completes.
+	## Returns the triggered synergy rules (empty most of the time).
 	run.picked_upgrades.append(id)
+	_apply_effect(run, id)
+	var triggered: Array = []
+	for rule: Dictionary in SYNERGIES:
+		var a := str(rule["a"])
+		var b := str(rule["b"])
+		var completes: bool = (
+			(id == a and b in run.picked_upgrades) or (id == b and a in run.picked_upgrades)
+		)
+		if not completes:
+			continue
+		var tag := _synergy_tag(rule)
+		if tag in run.synergies:
+			continue
+		run.synergies.append(tag)
+		_apply_synergy(run, str(rule["id"]))
+		triggered.append(rule)
+	return triggered
+
+
+static func _apply_synergy(run, rule_id: String) -> void:
+	match rule_id:
+		"bullet_storm":
+			run.projectiles += 1
+		"pinball":
+			run.pierce += 1
+		"overdrive":
+			run.frenzy_time = 7.0
+		"siege":
+			run.dmg *= 1.2
+		"deadeye":
+			run.crit_chance += 0.12
+		"cull":
+			run.executioner_mult = 1.5
+		"iron_maiden":
+			run.thorns *= 2.0
+		"jackpot":
+			run.mystery_guaranteed = true
+		"jammed":
+			run.fire_rate *= 0.9
+		"fragile_hope":
+			run.second_wind_frac = 0.15
+		"confused_physics":
+			run.ball_gravity_mult = lerpf(run.ball_gravity_mult, 1.0, 0.5)
+			run.ball_restitution_mult = lerpf(run.ball_restitution_mult, 1.0, 0.5)
+		"shrapnel_chaos":
+			run.dmg *= 0.9
+		"overheat":
+			run.dmg_taken_mult *= 1.08
+		"power_drain":
+			run.frenzy_mult = 1.15
+		"bulky":
+			run.move_speed *= 0.94
+		"polarity_clash":
+			run.magnet_strength *= 0.5
+
+
+static func _apply_effect(run, id: String) -> void:
 	match id:
 		"multishot":
 			run.projectiles += 1
@@ -287,3 +611,40 @@ static func apply(run, id: String) -> void:
 			run.momentum = true
 		"executioner":
 			run.executioner = true
+		"ricochet":
+			run.ricochet = true
+		"splitshot":
+			run.splitshot = true
+		"cannonball":
+			run.dmg *= 1.6
+			run.fire_rate *= 0.75
+			run.bullet_speed *= 0.8
+		"hollow_points":
+			run.hollow_points = true
+		"flak":
+			run.projectiles += 2
+			run.dmg *= 0.7
+		"glass_cannon":
+			run.dmg *= 1.5
+			run.max_hp *= 0.7
+			run.hp = minf(run.hp, run.max_hp)
+		"titan_frame":
+			run.max_hp += 40.0
+			run.hp = minf(run.max_hp, run.hp + 40.0)
+			run.move_speed *= 0.92
+		"overclock":
+			run.fire_rate *= 1.25
+			run.dmg_taken_mult *= 1.1
+		"thorns":
+			run.thorns += 15.0
+		"static_field":
+			run.slow_field = true
+		"kinetic_shield":
+			run.kinetic_shield = true
+		"heavy_balls":
+			run.ball_gravity_mult *= 1.25
+			run.ball_restitution_mult *= 0.7
+		"rubber_balls":
+			run.ball_restitution_mult *= 1.35
+		"magnet_gates":
+			run.magnet_strength += 140.0

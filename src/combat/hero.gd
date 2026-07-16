@@ -16,6 +16,7 @@ var moving := false
 
 var _fire_acc := 0.0
 var _aim := Vector2.RIGHT
+var _no_dmg_t := 99.0
 
 
 func radius() -> float:
@@ -29,6 +30,7 @@ func step(dt: float, move_dir: Vector2, manual_aim: Vector2) -> void:
 		run.hp = run.max_hp
 	iframes = maxf(0.0, iframes - dt)
 	frenzy_t = maxf(0.0, frenzy_t - dt)
+	_no_dmg_t += dt
 	if run.regen > 0.0:
 		run.hp = minf(run.max_hp, run.hp + run.regen * dt)
 
@@ -54,7 +56,7 @@ func step(dt: float, move_dir: Vector2, manual_aim: Vector2) -> void:
 
 	# Auto-fire while any target exists (or when manually aiming).
 	var want_fire := target != null or manual_aim.length() > 0.2
-	var rate: float = run.fire_rate * (1.3 if frenzy_t > 0.0 else 1.0)
+	var rate: float = run.fire_rate * (run.frenzy_mult if frenzy_t > 0.0 else 1.0)
 	if want_fire:
 		_fire_acc += dt * rate
 		while _fire_acc >= 1.0:
@@ -87,6 +89,12 @@ func take_damage(amount: float, from_hazard := false) -> void:
 		return
 	if not from_hazard and iframes > 0.0:
 		return
+	if run.kinetic_shield and not from_hazard and _no_dmg_t >= 4.0:
+		_no_dmg_t = 0.0
+		arena.fx.floater(position + Vector2(0, -22), "BLOCKED", Color(0.5, 0.9, 1.0), 14)
+		Sfx.play("bounce", 0.1)
+		return
+	_no_dmg_t = 0.0
 	run.hp -= amount * run.dmg_taken_mult
 	if not from_hazard:
 		iframes = BalanceS.HERO_IFRAMES
@@ -96,7 +104,7 @@ func take_damage(amount: float, from_hazard := false) -> void:
 	if run.hp <= 0.0:
 		if run.second_wind_ready:
 			run.second_wind_ready = false
-			run.hp = run.max_hp * BalanceS.SECOND_WIND_HP_FRAC
+			run.hp = run.max_hp * run.second_wind_frac
 			iframes = 1.5
 			Sfx.play("second_wind")
 			arena.fx.floater(position + Vector2(0, -24), "SECOND WIND", Color(0.5, 1.0, 0.7), 18)

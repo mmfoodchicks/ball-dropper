@@ -245,8 +245,12 @@ static func make_ball(pos: Vector2, vel: Vector2, value: int) -> Dictionary:
 static func step_ball(ball: Dictionary, board: Dictionary, dt: float) -> void:
 	## Integrates one ball for dt (call with substeps). Gates are sensors and
 	## are handled by the caller; this only does gravity, walls and lines.
+	## Upgrades may override physics via board["phys"].
+	var phys: Dictionary = board.get("phys", {})
+	var gravity := float(phys.get("g", BalanceS.GRAVITY))
+	var wall_rest := float(phys.get("wall", BalanceS.WALL_RESTITUTION))
 	var vel: Vector2 = ball["vel"]
-	vel.y += BalanceS.GRAVITY * dt
+	vel.y += gravity * dt
 	vel = vel.limit_length(BalanceS.MAX_BALL_SPEED)
 	var pos: Vector2 = ball["pos"] + vel * dt
 	var r := BalanceS.BALL_RADIUS
@@ -254,10 +258,10 @@ static func step_ball(ball: Dictionary, board: Dictionary, dt: float) -> void:
 	# Side walls.
 	if pos.x - r < BalanceS.BOARD_LEFT:
 		pos.x = BalanceS.BOARD_LEFT + r
-		vel.x = absf(vel.x) * BalanceS.WALL_RESTITUTION
+		vel.x = absf(vel.x) * wall_rest
 	elif pos.x + r > BalanceS.BOARD_RIGHT:
 		pos.x = BalanceS.BOARD_RIGHT - r
-		vel.x = -absf(vel.x) * BalanceS.WALL_RESTITUTION
+		vel.x = -absf(vel.x) * wall_rest
 	# Soft ceiling so bounced balls stay on screen.
 	if pos.y - r < BalanceS.BOARD_TOP - 26.0:
 		pos.y = BalanceS.BOARD_TOP - 26.0 + r
@@ -273,7 +277,7 @@ static func step_ball(ball: Dictionary, board: Dictionary, dt: float) -> void:
 				pos = cp + n * min_d
 				var vn := vel.dot(n)
 				if vn < 0.0:
-					vel -= n * vn * (1.0 + BalanceS.LINE_RESTITUTION)
+					vel -= n * vn * (1.0 + float(phys.get("line", BalanceS.LINE_RESTITUTION)))
 					vel *= 0.99
 
 	ball["pos"] = pos

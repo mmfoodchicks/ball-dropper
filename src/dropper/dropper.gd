@@ -53,6 +53,12 @@ func _ready() -> void:
 			}
 		)
 	)
+	# Upgrade-driven physics overrides (heavy/rubber balls).
+	board["phys"] = {
+		"g": BalanceS.GRAVITY * run.ball_gravity_mult,
+		"wall": clampf(BalanceS.WALL_RESTITUTION * run.ball_restitution_mult, 0.2, 0.92),
+		"line": clampf(BalanceS.LINE_RESTITUTION * run.ball_restitution_mult, 0.2, 0.92),
+	}
 	fx = FxS.new()
 	fx.z_index = 10
 	add_child(fx)
@@ -151,6 +157,8 @@ func _spawn_tick(dt: float) -> void:
 func _physics_tick(dt: float) -> void:
 	var keep: Array = []
 	for ball: Dictionary in balls:
+		if run.magnet_strength > 0.0:
+			_apply_magnet(ball, dt)
 		var sub_dt := dt / 3.0
 		for s in 3:
 			BoardGenS.step_ball(ball, board, sub_dt)
@@ -167,6 +175,24 @@ func _physics_tick(dt: float) -> void:
 	if not _pending_balls.is_empty():
 		balls.append_array(_pending_balls)
 		_pending_balls.clear()
+
+
+func _apply_magnet(ball: Dictionary, dt: float) -> void:
+	## Magnet Gates upgrade: active gates pull nearby balls toward themselves
+	## — multipliers and subtractors alike. Double-edged by design.
+	var pos: Vector2 = ball["pos"]
+	var best_d := 80.0
+	var pull := Vector2.ZERO
+	for gate: Dictionary in board["gates"]:
+		if not gate["active"]:
+			continue
+		var gp := Vector2(gate["x"], gate["y"])
+		var d := pos.distance_to(gp)
+		if d < best_d and d > 4.0:
+			best_d = d
+			pull = (gp - pos).normalized() * run.magnet_strength
+	if pull != Vector2.ZERO:
+		ball["vel"] += pull * dt
 
 
 func _step_buff(dt: float) -> void:

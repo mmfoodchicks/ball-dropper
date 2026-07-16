@@ -150,6 +150,8 @@ func _contact(hero) -> void:
 	if position.distance_to(hero.position) < radius + hero.radius():
 		hero.take_damage(BalanceS.BOSS_CONTACT_DMG)
 		contact_cd = BalanceS.CONTACT_COOLDOWN
+		if arena.run.thorns > 0.0:
+			take_hit(arena.run.thorns, false)
 
 
 func take_hit(amount: float, crit: bool) -> void:

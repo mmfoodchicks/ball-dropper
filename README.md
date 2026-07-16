@@ -35,6 +35,21 @@ so and the same design maps over.
 The window is the phone-shaped 480×854 design resolution. Everything is
 procedurally drawn and generated — there are no binary assets at all.
 
+### Content at a glance
+
+- **5 playable characters** — RANGER, BLITZ, BASTION, JINX, VOLT — each with
+  its own stats and innate perk; four are material unlocks.
+- **3 biomes** (Foundry / Mire / Void), shuffled per run, one per 5-wave
+  segment. Each tints the arena and supplies its own enemy roster.
+- **15 enemy kinds** — 9 peon-class (swarmers, weavers, turrets, hoppers,
+  splitters, teleporters, tanks) and 6 ball-dropping elites (charger,
+  shield-cycler, sniper, brood spawner, self-detonator, burst caster) — plus
+  the universal 3-phase boss.
+- **35 in-run upgrades** across the 5 GDD categories, with **16 hidden
+  synergy pairs** (8 beneficial, 8 detrimental, Isaac-style): offer cards
+  hint "◆ SYNERGY?" when a pick would complete a pair, but the polarity is
+  only revealed after committing.
+
 ### Controls
 
 | Input | Combat | Dropper |

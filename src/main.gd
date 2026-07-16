@@ -182,7 +182,7 @@ func _open_upgrades() -> void:
 	run.rerolls_this_phase = 0
 	var count := 4 if Meta.has_unlock("fourth") else 3
 	current_offer = UpgradePoolS.roll_offer(_rng, run, count)
-	screens.show_upgrades(current_offer, run.balls, BalanceS.reroll_cost(run.wave, 0))
+	screens.show_upgrades(current_offer, run, BalanceS.reroll_cost(run.wave, 0))
 
 
 func _on_reroll() -> void:
@@ -195,12 +195,16 @@ func _on_reroll() -> void:
 	var count := 4 if Meta.has_unlock("fourth") else 3
 	current_offer = UpgradePoolS.roll_offer(_rng, run, count)
 	screens.show_upgrades(
-		current_offer, run.balls, BalanceS.reroll_cost(run.wave, run.rerolls_this_phase)
+		current_offer, run, BalanceS.reroll_cost(run.wave, run.rerolls_this_phase)
 	)
 
 
 func _on_upgrade_chosen(upgrade_id: String) -> void:
-	UpgradePoolS.apply(run, upgrade_id)
+	var triggered: Array = UpgradePoolS.apply(run, upgrade_id)
+	run.pending_synergies = triggered
+	if autoplay:
+		for rule: Dictionary in triggered:
+			print("AUTOPLAY: synergy %s (%s)" % [rule["name"], "good" if rule["good"] else "bad"])
 	Sfx.play("upgrade")
 	_enter_combat(run.wave + 1)
 

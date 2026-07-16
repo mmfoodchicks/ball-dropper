@@ -26,12 +26,13 @@ tuning surface.
 | ??? gate, rare, random effects | `dropper.gd` `_apply_mystery` | ✅ all five GDD effects: random mult / random subtract / split / teleport / balls→gold / temporary +1 to all multiplier gates |
 | Guiding physics lines, no pegs | `board_gen.gd` | ✅ 4–6 random angled bars + guards; never intersect gates |
 | Fairness: never block exits, validate before play | `board_gen.gd` `validate` | ✅ phantom-ball sim must reach exit from ≥3 of 9 drop positions; 6 retries then a safe sparse fallback; anti-stuck nudges guarantee resolution in play |
-| Upgrade phase: 3 offered, pick 1 | `src/upgrades.gd`, `src/ui/screens.gd` | ✅ 21 upgrades across the 5 GDD categories ("Wider Choice" unlock makes it 4) |
+| Upgrade phase: 3 offered, pick 1 | `src/upgrades.gd`, `src/ui/screens.gd` | ✅ 35 upgrades across the 5 GDD categories ("Wider Choice" unlock makes it 4), plus 16 hidden positive/negative synergy pairs (`UpgradePool.SYNERGIES`) revealed only after committing |
+| New biomes (GDD future idea) | `Balance.BIOMES`, `Balance.ENEMY_KINDS`, `arena.gd` | ✅ 3 biomes shuffled per run (one per 5-wave segment): arena tint + per-biome rosters over 15 data-driven enemy kinds with 11 behavior archetypes |
 | Reroll costs balls, escalating | `Balance.reroll_cost` | ✅ 30 (wave 5) / 150 (wave 10) base, ×2 per reroll within a phase |
 | 15 waves, difficulty per wave | `Balance` wave formulas | ✅ counts + HP + speed scale per wave |
 | Victory rewards: gold, materials, performance | `src/main.gd` `_on_boss_defeated` | ✅ waves + boss + 10% ball conversion + HP-based performance bonus; 3 materials (+1 for keeping HP ≥50% through the boss) |
 | Meta: gold upgrades / material unlocks | `src/autoload/meta.gd` | ✅ 6 stat tracks; unlocks: guaranteed ??? gate, 4th upgrade option, character BLITZ |
-| New playable characters | `Balance.CHARACTERS` | ✅ RANGER default, BLITZ unlockable |
+| New playable characters | `Balance.CHARACTERS` | ✅ RANGER default; BLITZ, BASTION, JINX, VOLT unlockable, each with an innate perk |
 | Strong audio/visual feedback | `src/autoload/sfx.gd`, `src/fx/fx.gd` | ✅ procedural SFX, floaters, bursts, shake, gate flashes |
 | Daily seeds / leaderboards / biomes | — | ⏳ future; all RNG already flows through seedable `RandomNumberGenerator`s |
 

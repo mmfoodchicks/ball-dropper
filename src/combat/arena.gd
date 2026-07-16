@@ -46,6 +46,8 @@ var _spawn_timer := 0.0
 var _is_boss_wave := false
 var _wave_t := 0.0
 var _stall_report_at := 45.0
+var _biome_banner := ""
+var _synergy_notes: Array = []
 
 
 func _ready() -> void:
@@ -82,7 +84,17 @@ func start_wave(w: int) -> void:
 	_stall_report_at = 45.0
 	state = "banner"
 	_banner_text = "BOSS INCOMING" if _is_boss_wave else "WAVE %d" % w
+	_biome_banner = ""
+	if not _is_boss_wave and (w - 1) % 5 == 0:
+		_biome_banner = str(BalanceS.biome_for_wave(run.biomes, w)["name"])
+	# Reveal synergies discovered at the upgrade screen.
+	_synergy_notes = run.pending_synergies.duplicate()
+	run.pending_synergies = []
 	_banner_t = 2.4 if _is_boss_wave else BalanceS.WAVE_BANNER_TIME
+	if not _synergy_notes.is_empty():
+		_banner_t += 0.9
+		for rule: Dictionary in _synergy_notes:
+			Sfx.play("mystery" if rule["good"] else "gate_sub")
 	if _is_boss_wave:
 		Sfx.play("boss_roar")
 
@@ -91,10 +103,14 @@ func _build_queue(w: int) -> Array:
 	var queue: Array = []
 	if w >= BalanceS.BOSS_WAVE:
 		return queue
+	# The current biome decides which enemy kinds this wave cycles through.
+	var biome := BalanceS.biome_for_wave(run.biomes, w)
+	var peons: Array = biome["peons"]
+	var elites: Array = biome["elites"]
 	for i in BalanceS.peon_count(w):
-		queue.append("peon")
+		queue.append(peons[rng.randi_range(0, peons.size() - 1)])
 	for i in BalanceS.elite_count(w):
-		queue.append("brute" if rng.randf() < 0.5 else "spitter")
+		queue.append(elites[rng.randi_range(0, elites.size() - 1)])
 	# Fisher-Yates with the arena rng, so seeded runs stay reproducible.
 	for i in range(queue.size() - 1, 0, -1):
 		var j := rng.randi_range(0, i)
@@ -299,13 +315,33 @@ func _bullet_hit_pass(b) -> void:
 			var crit: bool = rng.randf() < run.crit_chance
 			var dmg: float = b.dmg * (run.crit_mult if crit else 1.0)
 			if run.executioner and e.is_elite:
-				dmg *= 1.25
+				dmg *= run.executioner_mult
+			if run.hollow_points and e.hp >= e.max_hp:
+				dmg *= 1.3
 			e.take_hit(dmg, crit)
 			Sfx.play("hit", 0.15, -10.0)
+			if b.can_split and not b.is_shard:
+				_spawn_shards(b, e)
 			if b.pierce_left > 0:
 				b.pierce_left -= 1
 			else:
 				b.alive = false
+
+
+func _spawn_shards(src, hit_e) -> void:
+	## Splitshot: a landed hit forks into two weak diagonal shards. Shards
+	## never split again and skip the enemy that spawned them.
+	for ang in [-0.6, 0.6]:
+		var s := BulletS.new()
+		s.position = src.position
+		s.vel = src.vel.rotated(ang) * 0.9
+		s.dmg = src.dmg * 0.4
+		s.radius = maxf(2.5, src.radius * 0.8)
+		s.is_shard = true
+		s.z_index = 4
+		s.mark_hit(hit_e.get_instance_id())
+		add_child(s)
+		bullets.append(s)
 
 
 func _cleanup() -> void:
@@ -365,18 +401,21 @@ func random_arena_point() -> Vector2:
 	)
 
 
-func spawn_bullet(pos: Vector2, vel: Vector2, dmg: float, radius: float, pierce: int) -> void:
+func spawn_bullet(pos: Vector2, vel: Vector2, dmg: float, radius: float, pierce: int) -> Node2D:
 	var b := BulletS.new()
 	b.position = pos
 	b.vel = vel
 	b.dmg = dmg
 	b.radius = radius
 	b.pierce_left = pierce
+	b.can_ricochet = run.ricochet
+	b.can_split = run.splitshot
 	b.z_index = 4
 	add_child(b)
 	bullets.append(b)
 	# Point-blank targets overlap the muzzle position; resolve immediately.
 	_bullet_hit_pass(b)
+	return b
 
 
 func spawn_enemy_bullet(pos: Vector2, vel: Vector2, dmg: float) -> void:
@@ -392,10 +431,25 @@ func spawn_enemy_bullet(pos: Vector2, vel: Vector2, dmg: float) -> void:
 
 
 func spawn_summons(count: int) -> void:
+	var biome := BalanceS.biome_for_wave(run.biomes, wave)
+	var peons: Array = biome["peons"]
 	for i in count:
 		if alive_enemy_count() >= 26:
 			return
-		_spawn_enemy("peon", _edge_point())
+		_spawn_enemy(peons[rng.randi_range(0, peons.size() - 1)], _edge_point())
+
+
+func spawn_reinforcement(kind: String, pos: Vector2) -> void:
+	## Mid-wave additions (broodmother spawns, death splits), capped so
+	## reinforcement loops can never flood the arena.
+	if alive_enemy_count() >= BalanceS.ALIVE_CAP:
+		return
+	var rect := BalanceS.ARENA_RECT
+	var p := Vector2(
+		clampf(pos.x, rect.position.x + 20.0, rect.end.x - 20.0),
+		clampf(pos.y, rect.position.y + 20.0, rect.end.y - 20.0)
+	)
+	_spawn_enemy(kind, p)
 
 
 func spawn_hazard(pos: Vector2) -> void:
@@ -425,15 +479,21 @@ func on_enemy_died(e) -> void:
 		fx.burst(e.position, Color(1.0, 0.82, 0.24), 14, 160.0)
 		Sfx.play("elite_die", 0.06)
 		if run.frenzy:
-			hero.frenzy_t = 4.0
+			hero.frenzy_t = run.frenzy_time
 		if run.executioner:
 			for other in enemies.duplicate():
 				if other != e and other.alive:
 					if other.position.distance_to(e.position) < 80.0:
 						other.take_hit(60.0, false)
 	else:
-		fx.burst(e.position, Color(1.0, 0.42, 0.4), 7, 110.0)
+		fx.burst(e.position, e.body_color, 7, 110.0)
 		Sfx.play("peon_die", 0.2, -6.0)
+	# Death splits (e.g. sporelings burst into mites).
+	for child_kind in e.def.get("split_into", []):
+		spawn_reinforcement(
+			str(child_kind),
+			e.position + Vector2(rng.randf_range(-12.0, 12.0), rng.randf_range(-12.0, 12.0))
+		)
 
 
 func on_boss_died() -> void:
@@ -556,8 +616,11 @@ func _bot_move() -> Vector2:
 
 func _draw() -> void:
 	var rect := BalanceS.ARENA_RECT
-	# Subtle grid.
-	var grid := Color(1, 1, 1, 0.035)
+	var biome := BalanceS.biome_for_wave(run.biomes, wave)
+	var tint: Color = biome["tint"]
+	# Biome floor + subtle grid.
+	draw_rect(rect, biome["bg"])
+	var grid := Color(tint.r, tint.g, tint.b, 0.05)
 	var x := rect.position.x
 	while x <= rect.end.x:
 		draw_line(Vector2(x, rect.position.y), Vector2(x, rect.end.y), grid, 1.0)
@@ -566,15 +629,29 @@ func _draw() -> void:
 	while y <= rect.end.y:
 		draw_line(Vector2(rect.position.x, y), Vector2(rect.end.x, y), grid, 1.0)
 		y += 56.0
-	# Border glow.
-	draw_rect(rect, Color(0.4, 0.7, 1.0, 0.22), false, 2.0)
+	# Border glow in the biome's color.
+	draw_rect(rect, Color(tint.r, tint.g, tint.b, 0.3), false, 2.0)
 	# Banner.
 	if state == "banner":
 		var font := ThemeDB.fallback_font
 		var a := clampf(_banner_t / 0.4, 0.0, 1.0)
-		var size := 36
-		var w := font.get_string_size(_banner_text, HORIZONTAL_ALIGNMENT_LEFT, -1, size).x
-		var pos := Vector2((BalanceS.DESIGN_W - w) * 0.5, BalanceS.DESIGN_H * 0.42)
+		_draw_center_text(
+			font, _biome_banner, BalanceS.DESIGN_H * 0.36, 20, Color(tint.r, tint.g, tint.b, a)
+		)
 		var col := Color(1.0, 0.35, 0.35, a) if _is_boss_wave else Color(1, 1, 1, a)
-		draw_string(font, pos + Vector2(2, 2), _banner_text, 0, -1, size, Color(0, 0, 0, a * 0.6))
-		draw_string(font, pos, _banner_text, 0, -1, size, col)
+		_draw_center_text(font, _banner_text, BalanceS.DESIGN_H * 0.42, 36, col)
+		var line_y := BalanceS.DESIGN_H * 0.48
+		for rule: Dictionary in _synergy_notes:
+			var scol := Color(0.45, 1.0, 0.6, a) if rule["good"] else Color(1.0, 0.45, 0.4, a)
+			_draw_center_text(font, "SYNERGY: %s" % rule["name"], line_y, 18, scol)
+			_draw_center_text(font, str(rule["desc"]), line_y + 20.0, 13, Color(0.85, 0.88, 1.0, a))
+			line_y += 44.0
+
+
+func _draw_center_text(font: Font, text: String, y: float, size: int, col: Color) -> void:
+	if text == "":
+		return
+	var w := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, size).x
+	var pos := Vector2((BalanceS.DESIGN_W - w) * 0.5, y)
+	draw_string(font, pos + Vector2(2, 2), text, 0, -1, size, Color(0, 0, 0, col.a * 0.6))
+	draw_string(font, pos, text, 0, -1, size, col)

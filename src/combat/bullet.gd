@@ -11,12 +11,30 @@ var radius := 4.0
 var pierce_left := 0
 var hostile := false
 var alive := true
+var can_ricochet := false
+var ricocheted := false
+var can_split := false
+var is_shard := false
 
 var _hit_ids := {}
 
 
 func step(dt: float) -> void:
 	position += vel * dt
+	if can_ricochet and not ricocheted and not hostile:
+		var r := BalanceS.ARENA_RECT
+		var bounced := false
+		if position.x < r.position.x or position.x > r.end.x:
+			vel.x = -vel.x
+			bounced = true
+		if position.y < r.position.y or position.y > r.end.y:
+			vel.y = -vel.y
+			bounced = true
+		if bounced:
+			ricocheted = true
+			position.x = clampf(position.x, r.position.x, r.end.x)
+			position.y = clampf(position.y, r.position.y, r.end.y)
+			return
 	var bounds := BalanceS.ARENA_RECT.grow(40.0)
 	if not bounds.has_point(position):
 		alive = false

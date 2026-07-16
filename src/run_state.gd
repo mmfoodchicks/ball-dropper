@@ -24,9 +24,21 @@ var regen := 0.0
 
 # One-shot / synergy flags.
 var second_wind_ready := false
+var second_wind_frac := 0.3
 var frenzy := false
+var frenzy_mult := 1.3
+var frenzy_time := 4.0
 var momentum := false
 var executioner := false
+var executioner_mult := 1.25
+
+# Weapon / defense modifiers.
+var ricochet := false
+var splitshot := false
+var hollow_points := false
+var thorns := 0.0
+var slow_field := false
+var kinetic_shield := false
 
 # Dropper / economy modifiers.
 var elite_ball_mult := 1.0
@@ -34,6 +46,17 @@ var lucky_gates := 0
 var gate_hacker := false
 var mystery_guaranteed := false
 var golden_touch := 0.0
+var ball_gravity_mult := 1.0
+var ball_restitution_mult := 1.0
+var magnet_strength := 0.0
+
+# Discovered synergies (names, prefixed +/- for polarity).
+var synergies: Array = []
+# Synergies triggered by the latest pick, consumed by the next arena banner.
+var pending_synergies: Array = []
+
+# Biome order for this run: one biome per 5-wave segment.
+var biomes: Array = ["foundry", "mire", "void"]
 
 # Progress.
 var wave := 1
@@ -77,8 +100,23 @@ static func build(char_id: String, meta_levels: Dictionary, unlocks: Dictionary)
 			"bounty":
 				run.elite_ball_mult += bonus
 
+	# Character innate perks.
+	var innate: Dictionary = cfg.get("innate", {})
+	for key: String in innate:
+		match key:
+			"dmg_taken_mult":
+				run.dmg_taken_mult *= float(innate[key])
+			"lucky_gates":
+				run.lucky_gates += int(innate[key])
+			"golden_touch":
+				run.golden_touch += float(innate[key])
+			"pierce":
+				run.pierce += int(innate[key])
+
 	if unlocks.get("mystery", false):
 		run.mystery_guaranteed = true
+	run.biomes = BalanceS.BIOMES.keys()
+	run.biomes.shuffle()
 	run.hp = run.max_hp
 	return run
 
