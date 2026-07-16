@@ -17,6 +17,14 @@ var moving := false
 var _fire_acc := 0.0
 var _aim := Vector2.RIGHT
 var _no_dmg_t := 99.0
+var _tex: Texture2D = null
+var _anim_t := 0.0
+
+
+func _ready() -> void:
+	var tex_path := "res://assets/sprites/char_%s.png" % run.character_id
+	if ResourceLoader.exists(tex_path):
+		_tex = load(tex_path)
 
 
 func radius() -> float:
@@ -31,6 +39,7 @@ func step(dt: float, move_dir: Vector2, manual_aim: Vector2) -> void:
 	iframes = maxf(0.0, iframes - dt)
 	frenzy_t = maxf(0.0, frenzy_t - dt)
 	_no_dmg_t += dt
+	_anim_t += dt
 	if run.regen > 0.0:
 		run.hp = minf(run.max_hp, run.hp + run.regen * dt)
 
@@ -119,9 +128,16 @@ func _draw() -> void:
 	var a := 1.0
 	if iframes > 0.0:
 		a = 0.45 + 0.4 * sin(iframes * 40.0)
-	draw_circle(Vector2.ZERO, radius() + 4.0, Color(0.35, 0.85, 1.0, 0.14 * a))
-	draw_circle(Vector2.ZERO, radius(), Color(0.35, 0.85, 1.0, a))
-	draw_circle(Vector2.ZERO, radius() * 0.5, Color(0.9, 1.0, 1.0, a))
+	if _tex != null:
+		var side := _tex.get_width() / 4.0 * 1.15
+		var bob := sin(_anim_t * 5.0) * 1.1
+		draw_texture_rect(
+			_tex, Rect2(-side * 0.5, -side * 0.5 + bob, side, side), false, Color(1, 1, 1, a)
+		)
+	else:
+		draw_circle(Vector2.ZERO, radius() + 4.0, Color(0.35, 0.85, 1.0, 0.14 * a))
+		draw_circle(Vector2.ZERO, radius(), Color(0.35, 0.85, 1.0, a))
+		draw_circle(Vector2.ZERO, radius() * 0.5, Color(0.9, 1.0, 1.0, a))
 	# Aim tick.
 	var tip := _aim * (radius() + 9.0)
 	draw_line(_aim * radius(), tip, Color(1, 1, 1, 0.7 * a), 2.0)

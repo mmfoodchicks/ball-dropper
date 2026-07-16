@@ -44,12 +44,17 @@ var weave_seed := 0.0
 var weave_t := 0.0
 
 var _speed_jitter := 1.0
+var _tex: Texture2D = null
+var _anim_t := 0.0
 
 
 func setup(enemy_kind: String, wave: int, arena_ref) -> void:
 	arena = arena_ref
 	kind = enemy_kind
 	def = BalanceS.enemy_def(kind)
+	var tex_path := "res://assets/sprites/enemy_%s.png" % kind
+	if ResourceLoader.exists(tex_path):
+		_tex = load(tex_path)
 	is_elite = def["class"] == "elite"
 	hp = BalanceS.enemy_hp(kind, wave)
 	max_hp = hp
@@ -74,6 +79,7 @@ func setup(enemy_kind: String, wave: int, arena_ref) -> void:
 
 
 func step(dt: float) -> void:
+	_anim_t += dt
 	flash_t = maxf(0.0, flash_t - dt)
 	contact_cd = maxf(0.0, contact_cd - dt)
 	if spawn_t > 0.0:
@@ -310,22 +316,30 @@ func _draw() -> void:
 		var fpulse := 0.5 + 0.5 * sin(fuse_t * 50.0)
 		draw_circle(Vector2.ZERO, radius + 6.0, Color(1.0, 0.25, 0.25, 0.4 * fpulse))
 
-	match shape:
-		"circle":
-			draw_circle(Vector2.ZERO, radius, body)
-			draw_circle(Vector2.ZERO, radius * 0.55, core)
-		"triangle":
-			_draw_poly(3, radius + 2.0, body, core)
-		"square":
-			draw_rect(Rect2(-radius, -radius, radius * 2.0, radius * 2.0), body)
-			draw_rect(Rect2(-radius * 0.5, -radius * 0.5, radius, radius), core)
-		"diamond":
-			_draw_poly(4, radius + 3.0, body, core)
-		"hex":
-			_draw_poly(6, radius + 2.0, body, core)
-		"spike":
-			_draw_star(radius + 4.0, body)
-			draw_circle(Vector2.ZERO, radius * 0.45, core)
+	if _tex != null:
+		# Pixel sprite (tools/make_sprites.py); vector shapes are the fallback.
+		var side := _tex.get_width() / 4.0
+		var bob := sin(_anim_t * 5.0 + weave_seed) * 1.1
+		draw_texture_rect(
+			_tex, Rect2(-side * 0.5, -side * 0.5 + bob, side, side), false, Color(1, 1, 1, a)
+		)
+	else:
+		match shape:
+			"circle":
+				draw_circle(Vector2.ZERO, radius, body)
+				draw_circle(Vector2.ZERO, radius * 0.55, core)
+			"triangle":
+				_draw_poly(3, radius + 2.0, body, core)
+			"square":
+				draw_rect(Rect2(-radius, -radius, radius * 2.0, radius * 2.0), body)
+				draw_rect(Rect2(-radius * 0.5, -radius * 0.5, radius, radius), core)
+			"diamond":
+				_draw_poly(4, radius + 3.0, body, core)
+			"hex":
+				_draw_poly(6, radius + 2.0, body, core)
+			"spike":
+				_draw_star(radius + 4.0, body)
+				draw_circle(Vector2.ZERO, radius * 0.45, core)
 
 	if shielded:
 		draw_arc(Vector2.ZERO, radius + 6.0, 0, TAU, 24, Color(0.5, 0.9, 1.0, 0.9), 3.0)

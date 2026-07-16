@@ -17,6 +17,17 @@ var can_split := false
 var is_shard := false
 
 var _hit_ids := {}
+var _tex: Texture2D = null
+
+
+func _ready() -> void:
+	var path := (
+		"res://assets/sprites/bullet_enemy.png"
+		if hostile
+		else "res://assets/sprites/bullet_player.png"
+	)
+	if ResourceLoader.exists(path):
+		_tex = load(path)
 
 
 func step(dt: float) -> void:
@@ -49,6 +60,10 @@ func mark_hit(id: int) -> void:
 
 
 func _draw() -> void:
+	if _tex != null:
+		var side := _tex.get_width() / 4.0 * (radius / 4.0)
+		draw_texture_rect(_tex, Rect2(-side * 0.5, -side * 0.5, side, side), false)
+		return
 	if hostile:
 		draw_circle(Vector2.ZERO, radius + 3.0, Color(1.0, 0.35, 0.45, 0.25))
 		draw_circle(Vector2.ZERO, radius, Color(1.0, 0.45, 0.55))

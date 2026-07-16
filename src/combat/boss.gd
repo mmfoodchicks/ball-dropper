@@ -27,6 +27,8 @@ var _charge_dir := Vector2.ZERO
 var _orbit_dir := 1.0
 var _orbit_flip_t := 3.0
 
+var _tex: Texture2D = null
+
 var _ring_t := 1.6
 var _aimed_t := 2.2
 var _charge_cd := 3.0
@@ -179,6 +181,8 @@ func _draw() -> void:
 		var pulse := 0.5 + 0.5 * sin(_charge_t * 40.0)
 		draw_line(Vector2.ZERO, _charge_dir * 500.0, Color(1.0, 0.3, 0.2, 0.35 * pulse), 4.0)
 		draw_circle(Vector2.ZERO, radius + 8.0, Color(1.0, 0.3, 0.2, 0.3 * pulse))
+	if _tex == null and ResourceLoader.exists("res://assets/sprites/boss.png"):
+		_tex = load("res://assets/sprites/boss.png")
 	draw_circle(Vector2.ZERO, radius + 6.0, Color(core.r, core.g, core.b, 0.16))
 	# Rotating spikes.
 	for i in 6:
@@ -189,9 +193,15 @@ func _draw() -> void:
 		draw_polygon(
 			PackedVector2Array([a, b, c]), PackedColorArray([core * 0.8, core * 0.5, core * 0.5])
 		)
-	draw_circle(Vector2.ZERO, radius, Color(0.16, 0.1, 0.22))
-	draw_circle(Vector2.ZERO, radius * 0.72, core * 0.55)
-	draw_circle(Vector2.ZERO, radius * 0.4, core)
+	if _tex != null:
+		var side := _tex.get_width() / 4.0 * 1.3
+		var mod := Color(1, 1, 1).lerp(core, 0.4)
+		var bob := sin(spin * 1.6) * 1.5
+		draw_texture_rect(_tex, Rect2(-side * 0.5, -side * 0.5 + bob, side, side), false, mod)
+	else:
+		draw_circle(Vector2.ZERO, radius, Color(0.16, 0.1, 0.22))
+		draw_circle(Vector2.ZERO, radius * 0.72, core * 0.55)
+		draw_circle(Vector2.ZERO, radius * 0.4, core)
 	draw_arc(Vector2.ZERO, radius + 4.0, 0, TAU, 32, Color(1.0, 0.82, 0.24, 0.85), 2.0)
 	if flash_t > 0.0:
 		draw_circle(Vector2.ZERO, radius, Color(1, 1, 1, 0.5))

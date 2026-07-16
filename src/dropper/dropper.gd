@@ -38,6 +38,8 @@ var _finished_emitted := false
 var _evt := {}
 # Balls created mid-iteration (??? gate splits) join the sim next tick.
 var _pending_balls: Array = []
+var _ball_tex: Texture2D = null
+var _gate_tex: Texture2D = null
 
 
 func _ready() -> void:
@@ -62,6 +64,10 @@ func _ready() -> void:
 	fx = FxS.new()
 	fx.z_index = 10
 	add_child(fx)
+	if ResourceLoader.exists("res://assets/sprites/ball.png"):
+		_ball_tex = load("res://assets/sprites/ball.png")
+	if ResourceLoader.exists("res://assets/sprites/gate_frame.png"):
+		_gate_tex = load("res://assets/sprites/gate_frame.png")
 
 
 func _physics_process(delta: float) -> void:
@@ -405,9 +411,15 @@ func _draw() -> void:
 		var r := BalanceS.BALL_RADIUS
 		if v > chunk:
 			r += minf(3.0, log(maxf(1.0, float(v) / maxf(1.0, float(chunk)))) * 0.9)
-		draw_circle(pos, r + 2.0, Color(1.0, 0.82, 0.24, 0.18))
-		draw_circle(pos, r, Color(1.0, 0.84, 0.3))
-		draw_circle(pos + Vector2(-r * 0.3, -r * 0.3), r * 0.35, Color(1.0, 0.95, 0.75))
+		if _ball_tex != null:
+			var side := (r + 2.0) * 2.0
+			draw_texture_rect(
+				_ball_tex, Rect2(pos.x - side * 0.5, pos.y - side * 0.5, side, side), false
+			)
+		else:
+			draw_circle(pos, r + 2.0, Color(1.0, 0.82, 0.24, 0.18))
+			draw_circle(pos, r, Color(1.0, 0.84, 0.3))
+			draw_circle(pos + Vector2(-r * 0.3, -r * 0.3), r * 0.35, Color(1.0, 0.95, 0.75))
 
 
 func _draw_gate(font: Font, gate: Dictionary) -> void:
@@ -434,12 +446,16 @@ func _draw_gate(font: Font, gate: Dictionary) -> void:
 	if not gate["active"]:
 		col = Color(0.45, 0.47, 0.5, 0.5)
 
-	# Frame.
-	draw_rect(rect, Color(col.r, col.g, col.b, 0.12 + 0.3 * flash))
-	draw_rect(rect, col, false, 2.0)
-	# Side posts, so gates read as "gates" not buttons.
-	draw_rect(Rect2(rect.position.x - 3.0, rect.position.y - 4.0, 3.0, rect.size.y + 8.0), col)
-	draw_rect(Rect2(rect.end.x, rect.position.y - 4.0, 3.0, rect.size.y + 8.0), col)
+	# Frame: white sprite tinted with the gate color, vector fallback.
+	if _gate_tex != null:
+		draw_texture_rect(_gate_tex, rect.grow(5.0), false, col)
+		if flash > 0.0:
+			draw_rect(rect, Color(1, 1, 1, 0.3 * flash))
+	else:
+		draw_rect(rect, Color(col.r, col.g, col.b, 0.12 + 0.3 * flash))
+		draw_rect(rect, col, false, 2.0)
+		draw_rect(Rect2(rect.position.x - 3.0, rect.position.y - 4.0, 3.0, rect.size.y + 8.0), col)
+		draw_rect(Rect2(rect.end.x, rect.position.y - 4.0, 3.0, rect.size.y + 8.0), col)
 
 	if gate["type"] == "bounce":
 		var cx := rect.get_center().x
