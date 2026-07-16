@@ -4,9 +4,10 @@
 Regenerate all sprites:      python3 tools/make_sprites.py
 Output:                      assets/sprites/*.png  (+ sheet_preview.png)
 
-Style: gritty 16-bit figures — angular slab bodies, squared pauldrons,
-helmeted heads, glowing slit eyes under heavy brows, muted highlights.
-Serious, not cutesy. All original designs, deterministic, upscaled x4
+Style: gritty 16-bit figures. Enemies are angular slabs with glowing slit
+eyes under heavy brows; playable characters are bareheaded adventurers — a
+gendered, diverse cast with visible hair and faces, class outfits and
+weapons, kept tasteful. All original designs, deterministic, upscaled x4
 nearest-neighbour. Colors track src/balance.gd. Replace any PNG with
 hand-made art (same filename) and the game picks it up automatically;
 missing files fall back to vector shapes in-game.
@@ -220,107 +221,164 @@ C = {
 # class weapon. Light comes from top-left, highlights stay muted.
 
 
-def _warrior(cid):
-    c = desat(C[cid], 0.15)
-    px = Px(30)
-    cx = 15
-    # legs
-    for sx in (cx - 4, cx + 3):
-        px.rect(sx, 22, sx + 1, 26, tint(c, 0.45))
-    # torso: broad shoulders tapering to the belt
-    px.fill(trap(cx, 12, 19, 11, 10), c)
-    px.hline(cx - 5, cx + 5, 21, tint(c, 0.4))  # belt
-    px.vline(cx, 14, 20, tint(c, 0.8))  # chest seam
-    # pauldrons
-    for sx in (cx - 11, cx + 7):
-        px.rect(sx, 11, sx + 4, 14, tint(c, 1.12))
-        px.hline(sx, sx + 4, 15, tint(c, 0.6))
-    # gauntlets
-    for sx in (cx - 10, cx + 8):
-        px.rect(sx, 16, sx + 2, 19, tint(c, 0.7))
-    # head
-    head = circle(cx, 7, 5)
-    px.fill(head, SKIN)
+def _hero_base(cid, skin, pants=(58, 50, 70)):
+    """Bareheaded adventurer chassis: boots, pants, torso slab, arms, head."""
+    c = desat(C[cid], 0.12)
+    px = Px(32)
+    cx = 16
+    for sx in (cx - 5, cx + 3):  # boots
+        px.rect(sx, 26, sx + 2, 28, (52, 44, 60))
+        px.hline(sx, sx + 2, 25, (78, 68, 88))
+    for sx in (cx - 5, cx + 3):  # pants
+        px.rect(sx, 22, sx + 2, 24, pants)
+    head = circle(cx, 8, 5)
+    px.fill(head, skin)
     return px, c, cx
 
 
+def _face(px, cx, skin, brow=DARK, lash=0, mouth_y=11):
+    for s in (-1, 1):
+        x = cx + s * 2
+        px.set(x, 9, PALE)
+        px.hline(x - 1, x + 1, 8, brow)
+        if lash and s == lash:
+            px.set(x + s, 9, brow)
+    px.set(cx, mouth_y, tint(skin, 0.62))
+
+
+def _belt(px, cx, y, w=6):
+    px.hline(cx - w, cx + w, y, (48, 40, 56))
+    px.set(cx, y, (216, 186, 96))  # buckle
+
+
 def char_ranger():
-    px, c, cx = _warrior("ranger")
-    # kettle helm with brim
-    px.paint(lambda x, y: circle(cx, 7, 5)(x, y) and y <= 6, tint(c, 0.95))
-    px.hline(cx - 6, cx + 6, 6, tint(c, 0.62))
-    stern_eyes(px, cx, 8, 2)
-    # long rifle at the right shoulder
-    px.vline(cx + 11, 4, 20, STEEL)
-    px.rect(cx + 10, 17, cx + 12, 20, (110, 82, 56))
+    # Scout captain. Teal ponytail, fitted jacket, bare midriff, long rifle.
+    skin = (226, 178, 136)
+    px, c, cx = _hero_base("ranger", skin)
+    hair = (34, 150, 172)
+    px.paint(lambda x, y: circle(cx, 8, 5)(x, y) and y <= 6, hair)
+    px.dots([(cx - 5, 7), (cx + 4, 6), (cx + 5, 7)], hair)  # bang sweep
+    px.vline(cx - 6, 8, 14, hair)  # ponytail
+    px.vline(cx - 7, 11, 16, tint(hair, 0.75))
+    _face(px, cx, skin, lash=1)
+    px.fill(trap(cx, 13, 15, 11, 6), c)  # cropped jacket
+    px.hline(cx - 6, cx + 6, 13, tint(c, 1.2))  # collar
+    px.vline(cx, 14, 18, tint(c, 0.7))  # zip
+    px.hline(cx - 4, cx + 4, 20, skin)  # bare midriff
+    _belt(px, cx, 21, 5)
+    for sx in (cx - 9, cx + 7):  # sleeves + gloves
+        px.rect(sx, 14, sx + 1, 17, tint(c, 0.9))
+        px.rect(sx, 18, sx + 1, 19, (60, 52, 70))
+    px.vline(cx + 11, 4, 21, STEEL)  # long rifle
+    px.rect(cx + 10, 18, cx + 12, 21, (110, 82, 56))
     px.set(cx + 11, 3, PALE)
     px.outline()
     return px
 
 
 def char_blitz():
-    px, c, cx = _warrior("blitz")
-    # deep hood, face in shadow
-    px.paint(lambda x, y: circle(cx, 7, 5)(x, y) and y <= 8, tint(c, 0.8))
-    px.paint(lambda x, y: circle(cx, 8, 3)(x, y) and y >= 7, (44, 38, 30))
-    stern_eyes(px, cx, 8, 2, (255, 236, 170))
-    # twin daggers, angled out
-    for s in (-1, 1):
-        bx = cx + s * 12
+    # Duelist. Spiked blond hair, flying scarf, sleeveless — arms out.
+    skin = (238, 196, 158)
+    px, c, cx = _hero_base("blitz", skin)
+    hair = (232, 196, 88)
+    px.paint(lambda x, y: circle(cx, 8, 5)(x, y) and y <= 5, hair)
+    px.dots([(cx - 4, 3), (cx - 1, 2), (cx + 3, 3), (cx + 5, 5)], hair)  # spikes
+    _face(px, cx, skin)
+    px.fill(trap(cx, 14, 13, 10, 7), c)  # vest
+    px.vline(cx - 3, 15, 20, tint(c, 0.65))
+    px.vline(cx + 3, 15, 20, tint(c, 0.65))
+    px.hline(cx - 5, cx + 5, 13, (196, 70, 58))  # scarf
+    px.hline(cx - 5, cx + 5, 12, (222, 88, 70))
+    px.dots([(cx - 7, 14), (cx - 8, 16), (cx - 8, 17)], (196, 70, 58))  # scarf tail
+    _belt(px, cx, 21, 5)
+    for sx in (cx - 8, cx + 7):  # bare arms + wraps
+        px.rect(sx, 14, sx + 1, 18, skin)
+        px.rect(sx, 19, sx + 1, 20, (60, 52, 70))
+    for s in (-1, 1):  # angled daggers
+        bx = cx + s * 11
         for i in range(3):
-            px.set(bx + s * i, 19 - i, (214, 222, 234))
-        px.set(bx - s, 20, (110, 82, 56))
+            px.set(bx + s * i, 20 - i, (214, 222, 234))
+        px.set(bx - s, 21, (110, 82, 56))
     px.outline()
     return px
 
 
 def char_bastion():
-    px, c, cx = _warrior("bastion")
-    # great helm: full steel, glowing visor slit
-    px.paint(circle(cx, 7, 5), tint(c, 1.02))
-    px.hline(cx - 5, cx + 5, 4, tint(c, 1.18))
-    px.hline(cx - 3, cx + 3, 8, DARK)
-    px.dots([(cx - 2, 8), (cx + 2, 8)], (170, 255, 190))
-    # tower shield, left side
-    px.rect(cx - 14, 9, cx - 9, 24, tint(c, 1.08))
-    px.rect(cx - 13, 10, cx - 10, 23, tint(c, 0.78))
-    for i in range(3):  # chevron
-        px.dots([(cx - 13 + i, 15 + i), (cx - 9 - i + 0, 15 + i)], tint(c, 1.2))
-    # sword, right side
-    px.vline(cx + 12, 8, 19, (214, 222, 234))
-    px.hline(cx + 11, cx + 13, 20, (110, 82, 56))
+    # Veteran shield-bearer. Bald, grey beard, brow scar, armored below.
+    skin = (150, 104, 72)
+    px, c, cx = _hero_base("bastion", skin)
+    beard = (188, 184, 178)
+    px.paint(lambda x, y: circle(cx, 9, 5)(x, y) and y >= 10, beard)
+    px.hline(cx - 3, cx + 3, 12, tint(beard, 0.8))
+    _face(px, cx, skin, mouth_y=10)
+    px.dots([(cx + 1, 6), (cx + 2, 7)], tint(skin, 1.3))  # brow scar
+    px.fill(trap(cx, 13, 17, 11, 8), c)  # breastplate
+    px.hline(cx - 7, cx + 7, 15, tint(c, 0.6))
+    px.hline(cx - 5, cx + 5, 18, tint(c, 0.6))
+    for sx in (cx - 11, cx + 7):  # pauldrons
+        px.rect(sx, 12, sx + 4, 15, tint(c, 1.12))
+        px.hline(sx, sx + 4, 16, tint(c, 0.6))
+    _belt(px, cx, 21, 6)
+    px.rect(cx - 15, 10, cx - 10, 25, tint(c, 1.08))  # tower shield
+    px.rect(cx - 14, 11, cx - 11, 24, tint(c, 0.78))
+    for i in range(3):
+        px.dots([(cx - 14 + i, 16 + i), (cx - 10 - i, 16 + i)], tint(c, 1.2))
+    px.vline(cx + 12, 8, 20, (214, 222, 234))  # sword
+    px.hline(cx + 11, cx + 13, 21, (110, 82, 56))
     px.outline()
     return px
 
 
 def char_jinx():
-    px, c, cx = _warrior("jinx")
-    # wide-brim hat, eyes shadowed beneath
-    px.paint(lambda x, y: circle(cx, 7, 5)(x, y) and y <= 5, tint(c, 0.85))
-    px.hline(cx - 7, cx + 7, 5, tint(c, 0.6))
-    px.rect(cx - 3, 2, cx + 3, 4, tint(c, 0.9))
-    px.paint(lambda x, y: circle(cx, 8, 4)(x, y) and 6 <= y <= 7, (52, 40, 48))
-    stern_eyes(px, cx, 8, 2, (255, 210, 240))
-    # coin in hand + thrown card
-    px.dots([(cx + 10, 17)], (255, 216, 96))
+    # Trickster. Long waves over one eye, off-shoulder top, coin and card.
+    skin = (240, 190, 150)
+    px, c, cx = _hero_base("jinx", skin)
+    hair = (214, 66, 138)
+    px.paint(lambda x, y: circle(cx, 8, 5)(x, y) and y <= 6, hair)
+    px.paint(lambda x, y: circle(cx, 8, 5)(x, y) and x <= cx - 1 and y <= 9, hair)  # bang
+    for sx, y1 in ((cx - 6, 16), (cx - 7, 14), (cx + 5, 15), (cx + 6, 13)):  # waves
+        px.vline(sx, 8, y1, hair)
+    px.vline(cx - 5, 10, 17, tint(hair, 0.75))
+    for s in (1,):
+        px.set(cx + s * 2, 9, PALE)  # visible eye
+        px.hline(cx + s * 2 - 1, cx + s * 2 + 1, 8, DARK)
+        px.set(cx + s * 3, 9, DARK)  # lash
+    px.set(cx, 11, tint(skin, 0.62))
+    px.fill(trap(cx, 14, 13, 10, 6), c)  # top
+    px.hline(cx + 2, cx + 6, 14, skin)  # off-shoulder
+    px.hline(cx - 6, cx + 1, 13, tint(c, 1.2))
+    px.fill(trap(cx, 20, 11, 14, 4), tint(c, 0.7))  # skirt
+    for sx in (cx - 9, cx + 7):  # arms + bracelet
+        px.rect(sx, 15, sx + 1, 18, skin)
+        px.set(sx, 19, (216, 186, 96))
+    px.dots([(cx + 10, 17)], (255, 216, 96))  # coin
     px.dots([(cx + 9, 17), (cx + 11, 17), (cx + 10, 16), (cx + 10, 18)], (176, 138, 48))
-    px.rect(cx - 13, 12, cx - 11, 15, PALE)
+    px.rect(cx - 13, 12, cx - 11, 15, PALE)  # thrown card
+    px.set(cx - 12, 13, (200, 60, 60))
     px.outline()
     return px
 
 
 def char_volt():
-    px, c, cx = _warrior("volt")
-    # cowl with mask, only the eyes lit
-    px.paint(lambda x, y: circle(cx, 7, 5)(x, y) and y <= 9, tint(c, 0.78))
-    px.paint(lambda x, y: circle(cx, 8, 3)(x, y) and y >= 7, (36, 44, 52))
-    stern_eyes(px, cx, 8, 2, (170, 250, 255))
-    # arc staff, left: angular crystal
-    px.vline(cx - 12, 6, 21, (110, 82, 56))
+    # Arcanist. Asymmetric undercut, arcane coat with lit seams, arc staff.
+    skin = (216, 208, 214)
+    px, c, cx = _hero_base("volt", skin)
+    hair = (238, 244, 252)
+    px.paint(lambda x, y: circle(cx, 8, 5)(x, y) and y <= 5, (92, 100, 116))  # shaved sides
+    px.paint(lambda x, y: circle(cx, 8, 5)(x, y) and y <= 5 and x <= cx + 1, hair)  # swept top
+    px.dots([(cx - 5, 6), (cx - 6, 7)], hair)
+    _face(px, cx, skin, brow=(70, 78, 94))
+    px.fill(trap(cx, 13, 15, 12, 9), c)  # long coat
+    px.vline(cx - 4, 14, 21, mix(c, PALE, 0.5))  # lit seams
+    px.vline(cx + 4, 14, 21, mix(c, PALE, 0.5))
+    px.dots([(cx, 15), (cx - 1, 16), (cx, 17), (cx - 1, 18)], (255, 255, 170))  # bolt
+    _belt(px, cx, 22, 5)
+    for sx in (cx - 9, cx + 7):  # gloved arms
+        px.rect(sx, 14, sx + 1, 19, tint(c, 0.85))
+        px.rect(sx, 20, sx + 1, 21, (60, 52, 70))
+    px.vline(cx - 12, 6, 22, (110, 82, 56))  # arc staff
     px.dots([(cx - 12, 4), (cx - 13, 5), (cx - 11, 5), (cx - 12, 5)], mix(c, PALE, 0.5))
     px.set(cx - 12, 3, PALE)
-    # bolt emblem
-    px.dots([(cx + 1, 15), (cx, 16), (cx + 1, 17), (cx, 18)], (255, 255, 170))
     px.outline()
     return px
 
