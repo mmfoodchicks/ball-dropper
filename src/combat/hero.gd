@@ -134,10 +134,10 @@ func _draw() -> void:
 	if iframes > 0.0:
 		a = 0.45 + 0.4 * sin(iframes * 40.0)
 	if _tex != null:
-		# Char art is a 48px canvas whose slim figure fills ~35px, drawn
-		# oversized so faces keep more texels per screen pixel than the
-		# enemy sprites. Art faces right; mirror it to follow the aim.
-		var side := _tex.get_width() / 4.0 * 0.82
+		# Hand-drawn 32px character map; the figure fills most of the canvas,
+		# so draw it a touch over 1:1 to stand a bit taller than a peon.
+		# Art faces right; mirror it to follow the aim.
+		var side := _tex.get_width() / 4.0 * 1.12
 		var bob := sin(_anim_t * 5.0) * 1.1
 		if _flip:
 			draw_set_transform(Vector2.ZERO, 0.0, Vector2(-1.0, 1.0))

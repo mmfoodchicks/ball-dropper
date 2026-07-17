@@ -5,14 +5,13 @@ Regenerate all sprites:      python3 tools/make_sprites.py
 Output:                      assets/sprites/*.png  (+ sheet_preview.png)
 
 Style: enemies are gritty angular slabs with glowing slit eyes under
-heavy brows; the five playables are compact 3/4-view heroes on one shared
-48px rig — slim builds, big bold hair masses with a top-light band,
-simple dark-pixel eyes on a lit face, action stances with slightly
-oversized weapons, kept tasteful. All original designs, deterministic,
-upscaled x4
-nearest-neighbour. Colors track src/balance.gd. Replace any PNG with
-hand-made art (same filename) and the game picks it up automatically;
-missing files fall back to vector shapes in-game.
+heavy brows (built procedurally); the five playables are hand-drawn 32x32
+pixel maps — deliberate per-pixel placement, hue-shifted shadow/highlight
+ramps, clean silhouettes and 3/4 action poses, kept tasteful. All original
+designs, deterministic, upscaled x4 nearest-neighbour. Colors track
+src/balance.gd. Replace any PNG with hand-made art (same filename) and the
+game picks it up automatically; missing files fall back to vector shapes
+in-game.
 """
 
 import math
@@ -242,266 +241,300 @@ C = {
 
 
 # ---------------------------------------------------------------- characters
-# Compact 3/4-view heroes: slim builds with a moderate head, big bold hair
-# masses carrying a bright top-light band, simple dark-pixel eyes on a lit
-# face, action stances with slightly oversized weapons. One shared rig —
-# same head, eye line, torso and leg stance — keeps the five reading as a
-# uniform cast. In-game the hero sprite flips to face the aim direction.
-
-CHK_CX = 21  # body/head axis; weapons and poses extend to the right
-
-
-def _chunk(skin, shirt, pants, boots, torso_hw=(4.6, 4.2, 3.4, 4.0), crop_y=28):
-    """Shared slim rig; returns (px, head_mask).
-
-    Draw order: back leg + boot (darkened), pelvis, front leg + boot,
-    torso (to crop_y), neck shadow, head with a profile nose. Callers
-    layer outfit, arms, hair and face on top in that order.
-    """
-    px = Px(48)
-    px.fill(capsule(18.5, 27.5, 17.5, 32.5, 1.7), tint(pants, 0.72))
-    px.rect(15, 33, 19, 35, tint(boots, 0.75))
-    px.set(20, 34, tint(boots, 0.75))  # toe
-    px.hline(15, 20, 35, tint(boots, 0.5))  # sole
-    px.fill(profile(CHK_CX, 26, 29, (3.8, 3.6, 2.9)), pants)
-    px.fill(capsule(23.5, 27.5, 24.5, 33.5, 1.7), pants)
-    px.rect(22, 34, 26, 36, boots)
-    px.set(27, 35, boots)  # toe
-    px.hline(22, 27, 36, tint(boots, 0.55))  # sole
-    px.fill(profile(CHK_CX, 18, crop_y, torso_hw), shirt)
-    px.fill(capsule(CHK_CX, 15.5, CHK_CX, 17.5, 1.5), tint(skin, 0.8))  # neck
-    head = ellipse(CHK_CX, 11.5, 5.0, 5.8)
-    px.paint(head, skin)
-    px.paint(lambda x, y: head(x, y) and y >= 14, tint(skin, 0.9))
-    px.set(26, 13, skin)  # profile nose
-    px.set(26, 14, tint(skin, 0.84))
-    return px, head
+# The five playables are HAND-DRAWN pixel maps (32x32), not procedural
+# shapes: every pixel is placed deliberately, the way the reference packs
+# are made. Shared skeleton across the cast — hair cap rows 2-6 with a
+# fringe-shadow row, 1x2 eyes on the same eye line (cols 13/16), chin row
+# 12, torso rows 14-21, split-stance legs, boots on the same ground line —
+# with hue-shifted ramps (shadows go cool, highlights warm) per character.
+# Legend: '.' transparent; letters are palette entries per character.
 
 
-def _eyes(px, c=(24, 20, 34), one=False):
-    """Simple 1x2 dark eyes at the shared eye line; `one` for a bang-covered
-    back eye."""
-    px.vline(24, 11, 12, c)
-    if not one:
-        px.vline(CHK_CX, 11, 12, c)
+def from_map(rows, pal):
+    """Build a Px from an ASCII pixel map. The canvas is len(rows) square;
+    short rows are treated as right-padded with transparency, so only the
+    painted columns need to be typed out. A row longer than the canvas is
+    an authoring error and raises."""
+    size = len(rows)
+    px = Px(size)
+    for y, row in enumerate(rows):
+        if len(row) > size:
+            raise ValueError("row %d is %d wide, max %d" % (y, len(row), size))
+        for x, ch in enumerate(row):
+            if ch == ".":
+                continue
+            px.set(x, y, pal[ch])
+    return px
 
 
-def _mass(px, mask, base, top=True):
-    """Punchy hair/cloth shading: flat base, deep 2px bottom shadow, then a
-    bright 2px band following the top of the silhouette (skip for masses
-    that sit mid-figure, like beards, where a light band reads wrong)."""
-    px.paint(mask, base)
-    pts = px.mask_pixels(mask)
-    for (x, y) in pts:
-        if not mask(x, y + 2):
-            px.set(x, y, tint(base, 0.6))
-    if top:
-        for (x, y) in pts:
-            if not mask(x, y - 2):
-                px.set(x, y, tint(base, 1.35))
+RANGER_PAL = {
+    "!": (176, 240, 244), "H": (52, 174, 194), "h": (28, 112, 144),
+    "S": (238, 190, 142), "s": (198, 138, 106), "E": (26, 20, 36),
+    "J": (64, 126, 150), "j": (40, 86, 114), "+": (112, 178, 196),
+    "P": (60, 56, 80), "p": (42, 38, 58),
+    "B": (80, 62, 54), "b": (54, 40, 38),
+    "G": (56, 48, 66), "O": (232, 194, 102),
+    "M": (188, 196, 210), "m": (124, 132, 152),
+    "W": (136, 98, 64), "w": (96, 66, 46), "*": (242, 248, 252),
+}
+
+# Scout captain: teal bob + ponytail, cropped jacket over a bare midriff,
+# both gloved hands on a levelled rifle.
+RANGER_MAP = [
+    "................................",
+    "................................",
+    "..........!!!!H.................",
+    "........h!!HHHHHH...............",
+    ".......hHHHHHHHHHHH.............",
+    "......hHhHHHHHHHHHh.............",
+    "......hHhHHsssssssh.............",
+    "......hHhHsSSSSSSSS.............",
+    "......hHhsSSSESSESS.............",
+    "......hhhsSSSESSESSS............",
+    ".......hhSSSSSSSSSss............",
+    "........hsSSSSSssSs.............",
+    "......hH...sSSSSs...............",
+    "......hh...+ssss+...............",
+    ".......h.j++JJJJJJj.....m.......",
+    ".......hjJJWWWMMMMMMGMMMMMMMM*..",
+    "........jJwwwwGGmmmmGmmmmmm.....",
+    ".........JJJJJJJJj..............",
+    ".........jJJJJJJjj..............",
+    "...........sSSSSs...............",
+    "...........sSSsSs...............",
+    "..........GGGGOGGG..............",
+    "..........pPPPPPPP..............",
+    "..........pPP.PPPP..............",
+    "..........pPP.PPPP..............",
+    "..........ppP.PPPP..............",
+    ".........bBBB.PPPP..............",
+    ".........bBBB.BBBBB.............",
+    ".........bbbb.BBBBB.............",
+    "..............bbbbb.............",
+    "................................",
+    "................................",
+]
+
+BLITZ_PAL = {
+    "A": (238, 204, 96), "a": (186, 140, 56), "!": (252, 240, 178),
+    "S": (242, 198, 158), "s": (204, 148, 110), "E": (26, 20, 36),
+    "V": (224, 170, 60), "v": (176, 122, 46), "+": (246, 210, 122),
+    "R": (214, 86, 66), "r": (164, 58, 52),
+    "P": (58, 52, 72), "p": (40, 36, 54),
+    "B": (76, 60, 76), "b": (52, 40, 54),
+    "G": (58, 50, 68), "O": (232, 194, 102),
+    "M": (210, 218, 232), "m": (142, 150, 168), "*": (244, 248, 252),
+}
+
+# Duelist: spiked blond crown, scarf tail streaming behind, gold vest with
+# a V-neck, dagger low in the lead hand and one reversed behind.
+BLITZ_MAP = [
+    "................................",
+    ".........A...A...A..............",
+    "........AAA.AAA.AAA.............",
+    "........aAAAAAAAAAA.............",
+    ".......aA!!AAAAAAAA.............",
+    ".......aAAAAAAAAAAAa............",
+    ".......aAAsssssssss.............",
+    ".......aAaSSSSSSSSS.............",
+    ".......aAaSSSESSESS.............",
+    "........AaSSSESSESSS............",
+    ".........aSSSSSSSSss............",
+    "..........sSSSs*Sss.............",
+    "...........sSSSSs...............",
+    "..........RRRRRRRRr.............",
+    ".....RRrsS++VVVVVvSs............",
+    "....Rr..sSvVSSSVVvSs............",
+    "........sSvVVSVVVv.Ss...........",
+    "......mmS.vVVVVVVv..SS..........",
+    "..........vVVVVVVv..SSO.........",
+    "..........vvVVVVvv.....M........",
+    "..........GGGGOGGG......M.......",
+    "..........pPPPPPPP.......M......",
+    "..........pPP.PPPP........*.....",
+    "..........pGG.GGGG..............",
+    "..........pPP.PPPP..............",
+    "..........ppP.PPPP..............",
+    ".........bBBB.PPPP..............",
+    ".........bBBB.BBBBB.............",
+    ".........bbbb.BBBBB.............",
+    "..............bbbbb.............",
+    "................................",
+    "................................",
+]
+
+BASTION_PAL = {
+    "S": (162, 112, 78), "s": (120, 78, 56), "!": (196, 146, 100),
+    "D": (208, 204, 198), "d": (158, 154, 152),
+    "w": (92, 86, 82), "E": (26, 20, 36),
+    "C": (152, 160, 176), "c": (106, 114, 132), "+": (198, 206, 220),
+    "P": (66, 62, 76), "p": (46, 42, 56),
+    "B": (92, 98, 112), "b": (62, 66, 78),
+    "G": (52, 46, 56), "O": (232, 194, 102),
+    "M": (214, 222, 236), "m": (150, 158, 172), "*": (246, 250, 253),
+    "T": (172, 180, 194), "t": (120, 128, 144),
+}
+
+# Veteran wall: bald crown with a shine, heavy grey brow bar and beard,
+# scarred cheek, sword raised behind the shoulder, tower shield braced in
+# front with a domed top, gold boss stud and a tapered foot.
+BASTION_MAP = [
+    "",
+    "",
+    "...........SSSS",
+    "..........S!!SSSS",
+    ".........SS!SSSSSS",
+    ".........sSSSSSSSSS",
+    ".........sSSSSSSSSS",
+    "..*......sSSwwwwwwS",
+    "..Mm.....sSSSESSESS",
+    "...Mm....sSSSESSES!",
+    "....Mm...sSDDDDDDDs",
+    ".....Mm..sDDDDDDDDd",
+    "......Mm..DDDDDDDDd",
+    ".......Mm.dDDDDDDd...TTT",
+    ".....OOOc++CCCCCCC+cTTTTTt",
+    "......GSscCCCCCCCCc.TTTTTTt",
+    "........scCCCCCCCCc.TT+O+Tt",
+    ".........cCCCCCCCCc.TT+O+Tt",
+    ".........ccCCCCCCcc.TT+O+Tt",
+    ".........cCCCCCCCCc.TTTTTTt",
+    ".........GGGGGOGGGG.TTTTTTt",
+    "..........pPPPPPPP..TTTTTTt",
+    "..........pPP.PPPP...TTTTTt",
+    "..........pPP.PPPP....TTTt",
+    "..........ppP.PPPP.....Tt",
+    "..........ppP.PPPP",
+    ".........bBBB.PPPP",
+    ".........bBBB.BBBBB",
+    ".........bbbb.BBBBB",
+    "..............bbbbb",
+    "",
+    "",
+]
+
+JINX_PAL = {
+    "K": (228, 88, 154), "k": (170, 46, 112), "!": (250, 172, 210),
+    "S": (242, 196, 152), "s": (206, 144, 110), "E": (26, 20, 36),
+    "V": (150, 88, 198), "v": (106, 54, 150), "+": (192, 136, 228),
+    "B": (88, 50, 112), "b": (60, 32, 80),
+    "O": (234, 198, 104), "*": (255, 246, 200),
+    "C": (240, 242, 250), "c": (206, 72, 72),
+}
+
+# Trickster gambler: long waves with a bang hiding the back eye, violet
+# off-shoulder dress with a gold hem, tall boots, coin tossed above the
+# lead hand and a card palmed behind.
+JINX_MAP = [
+    "................................",
+    "................................",
+    "..........KKKK..................",
+    ".........K!!KKKK................",
+    "........KK!KKKKKK...............",
+    ".......kKKKKKKKKKKK.............",
+    ".......kKKKKKKKKKKKk............",
+    ".......kKKKKKKsssss....*........",
+    ".......kKKKKKKSSESS..OOO........",
+    "........kKKKKSSSESSS.O*O........",
+    "........kKKkSSSSSSSs.....*......",
+    "........kksSSSSsSsS.SS..........",
+    "...........sSSSSs..SS...........",
+    ".......kk..ssss..SSS............",
+    "......kkSSs+VVVVvVS.............",
+    "......kkSsvVVVVVVv..............",
+    "....CCCSk.vVVVVVVv..............",
+    "....CcCsk.vvVVVVvv..............",
+    "....CCC...vvvvvvvv..............",
+    ".........vVVVVVVVVv.............",
+    "........vVVVVVVVVVVv............",
+    "........OOOOOOOOOOOO............",
+    "..........sSS.SSSS..............",
+    "..........sSS.vvvv..............",
+    ".........bBBB.BBBBB.............",
+    ".........bBBB.BBBBB.............",
+    ".........bBBB.BBBBB.............",
+    ".........bBBB.BBBBB.............",
+    ".........bbbb.BBBBB.............",
+    "..............bbbbb.............",
+    "................................",
+    "................................",
+]
+
+VOLT_PAL = {
+    "W": (246, 249, 253), "w": (176, 188, 204), "N": (88, 96, 112),
+    "S": (214, 198, 208), "s": (166, 146, 164), "E": (140, 242, 255),
+    "C": (64, 150, 162), "c": (40, 106, 122), "+": (198, 248, 252),
+    "*": (255, 252, 214),
+    "P": (56, 52, 70), "p": (40, 36, 54),
+    "B": (50, 46, 62), "b": (36, 32, 46),
+    "T": (124, 94, 64), "t": (90, 66, 46), "G": (60, 54, 74),
+    "g": (152, 236, 246), "o": (232, 250, 252),
+}
+
+# Arcanist: white sweep over a shaved side, storm coat with lit seams and
+# a bolt emblem, orb staff planted in the lead hand. Androgynous.
+VOLT_MAP = [
+    "................................",
+    "................................",
+    ".......................gg.......",
+    "..........WWWW........gog.......",
+    ".........WWWWWWWWWW...ttt.......",
+    ".........wWWWWWWWWWW....T.......",
+    ".........NNwWWWWWWWw....T.......",
+    ".........NNNsssssss.....T.......",
+    ".........NsSSESSESS.....T.......",
+    ".........NsSSESSESSS....T.......",
+    "..........sSSSSSSSSs....t.......",
+    "..........sSSSSssSS.....t.......",
+    "...........sSSSSs.......t.......",
+    "..........+ssss++.......T.......",
+    "........c+CCCCCCC+cCCCCGT.......",
+    "........cCCCCCCCCCc...GGT.......",
+    "........cCC+C*C+CCc.....T.......",
+    "........cCC+*CC+CCc.....T.......",
+    "........cCC+CCC+CCc.....T.......",
+    "........ccC+CCC+Ccc.....T.......",
+    "........cCC+CCC+cCc.....T.......",
+    "........cCC+CCC+cCc.....T.......",
+    "........ccccccccccc.....T.......",
+    "..........pPP.PPPP......T.......",
+    "..........pPP.PPPP......t.......",
+    "..........ppP.PPPP..............",
+    ".........bBBB.PPPP..............",
+    ".........bBBB.BBBBB.............",
+    ".........bbbb.BBBBB.............",
+    "..............bbbbb.............",
+    "................................",
+    "................................",
+]
 
 
 def char_ranger():
-    # Scout captain: teal bob + ponytail, cropped jacket, bare midriff,
-    # levelled precision rifle held in both hands.
-    skin = (226, 178, 136)
-    hair = (42, 168, 188)
-    c = desat(C["ranger"], 0.12)
-    px, head = _chunk(skin, c, (50, 46, 64), (40, 62, 74), crop_y=23)
-    px.fill(profile(CHK_CX, 24, 26, (3.4, 3.3, 3.7)), skin)  # bare midriff
-    px.set(CHK_CX, 25, tint(skin, 0.7))  # navel
-    px.hline(17, 25, 27, (48, 40, 56))  # low belt
-    px.set(CHK_CX, 27, (216, 186, 96))
-    px.hline(18, 24, 18, tint(c, 1.2))  # collar
-    px.vline(CHK_CX, 19, 22, tint(c, 0.68))  # zip
-    px.fill(capsule(18.5, 20, 23, 22, 1.3), tint(c, 0.62))  # back arm
-    hm = union(
-        lambda x, y: head(x, y) and (y <= 7 or x <= 17),
-        ellipse(15.5, 8, 3.4, 3.2),  # bob volume
-        capsule(13.5, 9, 12, 19, 2.0),  # ponytail
-        capsule(12, 19, 13, 24, 1.3),  # tail tip
-    )
-    _mass(px, hm, hair)
-    px.dots([(19, 8), (22, 8), (24, 8)], hair)  # fringe tips
-    px.hline(19, 25, 9, tint(skin, 0.78))  # fringe shadow
-    _eyes(px)
-    px.dots([(19, 13), (25, 13)], (232, 130, 110), 100)  # blush
-    px.hline(24, 37, 20, STEEL)  # rifle, held level
-    px.hline(26, 36, 21, tint(STEEL, 0.7))
-    px.set(38, 20, PALE)  # muzzle
-    px.set(30, 19, tint(STEEL, 0.8))  # sight
-    px.rect(20, 19, 23, 22, (108, 80, 56))  # stock
-    px.fill(capsule(23, 20, 27, 22.5, 1.3), tint(c, 0.9))  # front arm
-    px.fill(circle(28, 22, 1.5), (58, 50, 68))  # gloves on the grip
-    px.fill(circle(24, 22.5, 1.4), (58, 50, 68))
+    px = from_map(RANGER_MAP, RANGER_PAL)
     px.outline()
     return px
 
 
 def char_blitz():
-    # Duelist: swept-back blond spikes, scarf streaming behind, gold vest,
-    # low lunge with a dagger forward and one reversed behind.
-    skin = (238, 196, 158)
-    hair = (232, 198, 92)
-    c = desat(C["blitz"], 0.12)
-    px, head = _chunk(skin, c, (54, 48, 66), (70, 58, 76))
-    px.paint(lambda x, y: 18 <= y <= 19 and abs(x - CHK_CX) <= 19 - y, skin)  # V-neck
-    px.vline(17, 19, 25, tint(c, 0.66))  # vest edges
-    px.vline(25, 19, 25, tint(c, 0.66))
-    px.hline(17, 25, 26, (48, 40, 56))  # belt
-    px.set(CHK_CX, 26, (216, 186, 96))
-    px.fill(capsule(18.5, 20, 14, 24, 1.3), tint(skin, 0.8))  # back arm
-    px.fill(circle(13.5, 25, 1.4), tint(skin, 0.8))
-    px.set(12, 25, (216, 186, 96))  # reversed dagger behind
-    px.dots([(11, 26), (10, 27)], (214, 222, 236))
-    sc = union(capsule(17, 16.5, 25, 16.5, 1.2), capsule(16, 16, 10, 12.5, 1.7))
-    _mass(px, sc, (210, 80, 62))  # scarf + streaming tail
-    hm = union(
-        lambda x, y: head(x, y) and (y <= 7 or x <= 16),
-        capsule(15, 5, 11, 3, 1.5),  # swept-back spikes
-        capsule(14, 7.5, 10, 6.5, 1.4),
-        capsule(14, 10, 11, 10.5, 1.2),
-        capsule(19, 4, 23, 2.5, 1.5),  # front spike
-    )
-    _mass(px, hm, hair)
-    px.dots([(10, 2), (9, 6), (20, 8), (23, 8)], hair)  # spike + fringe tips
-    px.hline(19, 25, 9, tint(skin, 0.78))  # fringe shadow
-    _eyes(px)
-    px.set(24, 15, tint(skin, 0.55))  # grin
-    px.set(25, 15, (242, 242, 246))  # tooth glint
-    px.fill(capsule(23, 20, 27.5, 24.5, 1.4), skin)  # front arm, lunging low
-    px.fill(circle(28, 25, 1.5), skin)
-    px.set(29, 24, (216, 186, 96))  # guard
-    for i in range(4):  # blade forward-down
-        px.set(30 + i, 26 + i, (218, 226, 238))
-    px.set(34, 30, PALE)  # tip
+    px = from_map(BLITZ_MAP, BLITZ_PAL)
     px.outline()
     return px
 
 
 def char_bastion():
-    # Veteran wall: bald, grey-bearded, scarred brow; sword shouldered
-    # behind, tower shield braced in front.
-    skin = (150, 104, 72)
-    beard = (196, 192, 186)
-    c = desat(C["bastion"], 0.12)
-    px, head = _chunk(skin, c, (58, 56, 66), (52, 50, 62),
-                      torso_hw=(5.2, 4.8, 4.2, 4.6))
-    px.vline(CHK_CX, 18, 25, tint(c, 1.15))  # cuirass ridge
-    px.hline(17, 25, 24, tint(c, 0.62))  # waist plate
-    px.dots([(18, 20), (24, 20), (17, 23), (25, 23)], tint(c, 0.55))  # rivets
-    px.hline(17, 25, 26, (48, 42, 52))
-    px.fill(circle(16.5, 18.5, 2.4), tint(c, 1.08))  # back pauldron
-    for i in range(8):  # sword shouldered up-back
-        px.set(14 - i, 16 - i, (214, 222, 236))
-        px.set(15 - i, 16 - i, (166, 174, 188))
-    px.set(6, 7, PALE)  # tip glint
-    px.set(14, 17, (216, 186, 96))  # guard
-    px.dots([(19, 6), (20, 6), (21, 7)], tint(skin, 1.2))  # crown shine
-    bm = union(
-        lambda x, y: head(x, y) and y >= 14 and x >= 18,
-        ellipse(23, 16.5, 3.4, 2.2),
-    )
-    _mass(px, bm, beard, top=False)  # full beard, no light band mid-face
-    px.hline(20, 25, 10, (128, 124, 120))  # heavy brow bar
-    _eyes(px)
-    px.dots([(24, 8), (24, 9)], tint(skin, 1.32))  # brow scar
-    px.set(24, 10, skin)  # scar notches the brow
-    sh = profile(28.5, 15, 30, (2.4, 3.0, 3.0, 2.3))  # tower shield, braced
-    px.fill(sh, tint(c, 1.05))
-    px.paint(
-        lambda x, y: sh(x, y) and abs(x - 28.5) <= 1.4 and 17 <= y <= 28,
-        tint(c, 0.8),
-    )
-    px.dots([(27, 19), (28, 20), (29, 21), (30, 20), (31, 19)], tint(c, 1.24))
-    px.fill(capsule(23, 20, 25.5, 22.5, 1.4), tint(c, 0.8))  # front arm to shield
+    px = from_map(BASTION_MAP, BASTION_PAL)
     px.outline()
     return px
 
 
 def char_jinx():
-    # Trickster gambler: magenta waves with a bang over the back eye,
-    # off-shoulder top, flared skirt, tall boots, coin toss mid-flip.
-    skin = (240, 190, 150)
-    hair = (222, 78, 148)
-    c = desat(C["jinx"], 0.12)
-    bc = (66, 44, 78)
-    px, head = _chunk(skin, c, skin, bc, torso_hw=(4.2, 3.9, 3.2, 3.9))
-    px.rect(22, 31, 26, 33, bc)  # tall boot cuffs over bare legs
-    px.rect(15, 30, 19, 32, tint(bc, 0.75))
-    px.fill(profile(CHK_CX, 24, 28, (4.2, 4.8, 5.8)), tint(c, 0.72))  # skirt
-    px.hline(16, 26, 28, (232, 196, 100))  # gold hem
-    px.hline(18, 24, 24, tint(c, 0.5))  # waistband
-    px.hline(23, 25, 29, (130, 64, 108))  # thigh band
-    px.paint(lambda x, y: 18 <= y <= 19 and 16 <= x <= 18, skin)  # bare shoulder
-    px.hline(16, 18, 20, tint(c, 1.24))  # slanted neckline
-    px.hline(19, 24, 18, tint(c, 1.24))
-    px.fill(capsule(18.5, 20, 15.5, 23.5, 1.2), tint(skin, 0.82))  # back arm
-    px.fill(circle(15, 24.5, 1.3), tint(skin, 0.82))
-    px.rect(12, 22, 14, 25, PALE)  # palmed card
-    px.set(13, 23, (204, 64, 64))
-    hm = union(
-        lambda x, y: head(x, y) and (y <= 8 or x <= 17),
-        lambda x, y: 8 <= y <= 12 and 18 <= x <= 19 + (y - 8),  # bang, back eye
-        ellipse(15, 10, 3.8, 4.4),  # wave volume
-        capsule(13.5, 14, 11.5, 23, 2.3),  # falling waves
-        capsule(11.5, 23, 13, 27, 1.5),
-    )
-    _mass(px, hm, hair)
-    px.dots([(12, 17), (13, 21)], tint(hair, 0.55))  # wave notches
-    px.hline(22, 25, 10, tint(skin, 0.78))  # fringe shadow
-    _eyes(px, one=True)
-    px.set(25, 10, (24, 20, 34))  # lash flick
-    px.set(23, 15, tint(skin, 0.55))  # smirk
-    px.set(24, 14, tint(skin, 0.55))
-    px.set(25, 16, tint(skin, 0.7))  # beauty mark
-    px.fill(capsule(23.5, 20, 27, 16.5, 1.2), skin)  # front arm raised
-    px.fill(circle(27.5, 15.5, 1.3), skin)
-    px.set(27, 17, (232, 196, 100))  # bracelet
-    px.fill(circle(30, 11, 1.7), (242, 204, 96))  # lucky coin
-    px.set(30, 10, (255, 242, 184))
-    px.dots([(30, 7), (33, 11), (27, 9)], (255, 242, 184), 150)  # sparkle
+    px = from_map(JINX_MAP, JINX_PAL)
     px.outline()
     return px
 
 
 def char_volt():
-    # Arcanist: white sweep over a shaved side, storm coat with lit seams
-    # flaring behind, orb staff planted in front. Androgynous.
-    skin = (208, 190, 198)
-    hair = (242, 246, 252)
-    c = desat(C["volt"], 0.12)
-    glow = mix(c, PALE, 0.5)
-    px, head = _chunk(skin, tint(c, 0.7), (50, 46, 64), (48, 44, 60),
-                      torso_hw=(4.4, 4.1, 3.6, 3.9))
-    cm = profile(20.5, 26, 34, (4.4, 4.1, 3.6))  # coat skirt
-    _mass(px, cm, tint(c, 0.62))
-    for s in (-1, 1):  # lit seams
-        px.vline(CHK_CX + s * 3, 19, 32, glow)
-    px.dots([(21, 20), (20, 21), (21, 22)], (255, 250, 190))  # bolt emblem
-    px.hline(16, 17, 16, tint(c, 0.95))  # collar nubs beside the chin
-    px.hline(25, 26, 16, tint(c, 0.95))
-    px.fill(capsule(18.5, 20, 15.5, 23.5, 1.2), tint(c, 0.55))  # back arm
-    px.fill(circle(15, 24.5, 1.3), (58, 52, 72))
-    px.paint(lambda x, y: head(x, y) and y <= 8 and x <= 16, (78, 86, 102))  # shave
-    hm = union(
-        lambda x, y: head(x, y) and y <= 6 and x <= 23,  # low flat cap
-        capsule(22, 5.5, 25.5, 7.5, 1.2),  # sweep tip over the brow
-    )
-    _mass(px, hm, hair)
-    px.set(26, 8, hair)  # stray strand
-    px.hline(19, 25, 8, tint(skin, 0.8))  # fringe shadow
-    _eyes(px, (130, 240, 255))  # arc-lit eyes
-    px.hline(23, 24, 15, tint(skin, 0.6))  # calm mouth
-    px.vline(29, 6, 30, (106, 82, 60))  # staff
-    px.vline(29, 12, 19, (126, 100, 74))
-    px.dots([(28, 5), (30, 5)], (106, 82, 60))  # fork
-    px.glow(circle(29, 3.5, 1.4), glow, 2, 90)
-    px.fill(circle(29, 3.5, 1.5), glow)  # orb
-    px.set(29, 3, PALE)
-    px.dots([(27, 2), (31, 2), (32, 5)], glow, 150)  # static
-    px.fill(capsule(23, 20, 27, 22.5, 1.3), tint(c, 0.55))  # front arm
-    px.fill(circle(28, 23, 1.5), (58, 52, 72))  # grip
+    px = from_map(VOLT_MAP, VOLT_PAL)
     px.outline()
     return px
 
