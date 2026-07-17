@@ -290,7 +290,10 @@ func _step_bullets(dt: float) -> void:
 			continue
 		b.step(dt)
 		if b.alive and hero.alive:
-			if b.position.distance_to(hero.position) < b.radius + hero.radius():
+			var near := Geometry2D.get_closest_point_to_segment(
+				hero.position, b.prev_position, b.position
+			)
+			if near.distance_to(hero.position) < b.radius + hero.radius():
 				b.alive = false
 				hero.take_damage(b.dmg)
 
@@ -310,7 +313,10 @@ func _bullet_hit_pass(b) -> void:
 		var id: int = e.get_instance_id()
 		if b.already_hit(id):
 			continue
-		if b.position.distance_to(e.position) < b.radius + e.radius:
+		# Swept test: fast bullets cross more than a small enemy's diameter
+		# in one fixed tick, so check the whole segment travelled this step.
+		var near := Geometry2D.get_closest_point_to_segment(e.position, b.prev_position, b.position)
+		if near.distance_to(e.position) < b.radius + e.radius:
 			b.mark_hit(id)
 			var crit: bool = rng.randf() < run.crit_chance
 			var dmg: float = b.dmg * (run.crit_mult if crit else 1.0)
@@ -404,6 +410,7 @@ func random_arena_point() -> Vector2:
 func spawn_bullet(pos: Vector2, vel: Vector2, dmg: float, radius: float, pierce: int) -> Node2D:
 	var b := BulletS.new()
 	b.position = pos
+	b.prev_position = pos
 	b.vel = vel
 	b.dmg = dmg
 	b.radius = radius
@@ -421,6 +428,7 @@ func spawn_bullet(pos: Vector2, vel: Vector2, dmg: float, radius: float, pierce:
 func spawn_enemy_bullet(pos: Vector2, vel: Vector2, dmg: float) -> void:
 	var b := BulletS.new()
 	b.position = pos
+	b.prev_position = pos
 	b.vel = vel
 	b.dmg = dmg
 	b.radius = 5.0

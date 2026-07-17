@@ -16,6 +16,11 @@ var ricocheted := false
 var can_split := false
 var is_shard := false
 
+## Start of the segment travelled this step; collision is swept along
+## prev_position -> position so fast bullets can't tunnel through small
+## enemies in one fixed tick.
+var prev_position := Vector2.ZERO
+
 var _hit_ids := {}
 var _tex: Texture2D = null
 
@@ -31,6 +36,7 @@ func _ready() -> void:
 
 
 func step(dt: float) -> void:
+	prev_position = position
 	position += vel * dt
 	if can_ricochet and not ricocheted and not hostile:
 		var r := BalanceS.ARENA_RECT
