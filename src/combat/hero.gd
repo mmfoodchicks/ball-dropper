@@ -129,7 +129,9 @@ func _draw() -> void:
 	if iframes > 0.0:
 		a = 0.45 + 0.4 * sin(iframes * 40.0)
 	if _tex != null:
-		var side := _tex.get_width() / 4.0 * 1.15
+		# Char art is a 48px canvas shown at ~37px, so faces keep
+		# more texels per screen pixel than the enemy sprites.
+		var side := _tex.get_width() / 4.0 * 0.78
 		var bob := sin(_anim_t * 5.0) * 1.1
 		draw_texture_rect(
 			_tex, Rect2(-side * 0.5, -side * 0.5 + bob, side, side), false, Color(1, 1, 1, a)
