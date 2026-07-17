@@ -4,11 +4,11 @@
 Regenerate all sprites:      python3 tools/make_sprites.py
 Output:                      assets/sprites/*.png  (+ sheet_preview.png)
 
-Style: gritty 16-bit. Enemies are angular slabs with glowing slit eyes
-under heavy brows; the five playables are PEOPLE on one shared 48px human
-rig — capsule/curve silhouettes instead of slabs, multi-pixel faces (iris,
-brows, nose, mouth), gendered builds, class outfits and weapons, kept
-tasteful. All original designs, deterministic, upscaled x4
+Style: enemies are gritty angular slabs with glowing slit eyes under
+heavy brows; the five playables are chunky 3/4-view heroes on one shared
+48px rig — big bold hair masses with a top-light band, simple dark-pixel
+eyes on a lit face, action stances with oversized weapons, kept tasteful.
+All original designs, deterministic, upscaled x4
 nearest-neighbour. Colors track src/balance.gd. Replace any PNG with
 hand-made art (same filename) and the game picks it up automatically;
 missing files fall back to vector shapes in-game.
@@ -241,290 +241,268 @@ C = {
 
 
 # ---------------------------------------------------------------- characters
-# The five playables are PEOPLE and share one 48px rig — identical head
-# size, eye line, shoulder line, stance and boot line — so the roster reads
-# as a uniform cast. Silhouettes come from capsules and eased width
-# profiles instead of slabs, and faces get multi-pixel eyes (white + iris
-# column), lids, brows, a nose and a mouth so they read at arena zoom.
+# Chunky-hero style (the direction the user picked): 3/4-view figures
+# facing right in an action stance, big bold hair masses with a bright
+# top-light band, compact bodies, simple dark-pixel eyes on a lit face,
+# oversized weapons. One shared rig — same head, eye line, torso and leg
+# stance — keeps the five reading as a uniform cast. In-game the hero
+# sprite flips horizontally to face the aim direction.
 
-HERO_CX = 24
-
-BUILDS = {  # torso half-widths, top to bottom: shoulders, chest, waist, hips
-    "m": (8.4, 7.4, 5.8, 6.6),
-    "f": (7.0, 6.0, 4.4, 6.9),
-    "n": (7.6, 6.6, 5.2, 6.2),
-}
+CHK_CX = 22  # body/head axis; weapons and poses extend to the right
 
 
-def _person(skin, build, shirt, sleeves=None, gloves=None, legs=(52, 46, 66),
-            hips=None, boots=(44, 38, 54), crop_y=31, back=None):
-    """Shared 48px human rig; returns (px, cx, head_mask).
+def _chunk(skin, shirt, pants, boots, torso_hw=(6.0, 5.6, 4.8, 5.6), crop_y=30):
+    """Shared chunky rig; returns (px, head_mask).
 
-    Draw order: back layer (ponytails/scarf tails), legs, boots, hip
-    garment, torso (down to crop_y), arms + hands, neck, head. Callers add
-    outfit detail, hair and the face on top, so every character keeps the
-    same proportions. sleeves/gloves default to bare skin.
+    Draw order: back leg + boot (darkened), pelvis, front leg + boot,
+    torso (to crop_y), neck shadow, big head with a profile nose. Callers
+    layer outfit, arms, hair and face on top in that order.
     """
     px = Px(48)
-    cx = HERO_CX
-    bw = BUILDS[build] if isinstance(build, str) else tuple(build)
-    if back:
-        back(px)
-    for s in (-1, 1):
-        px.fill(capsule(cx + s * 3.2, 31.5, cx + s * 3.4, 42.0, 2.2), legs)
-    for s in (-1, 1):
-        bx = cx + s * 3.4
-        px.rect(bx - 2, 42, bx + 2, 45, boots)
-        px.hline(bx - 2, bx + 2, 42, tint(boots, 1.3))
-        px.hline(bx - 2, bx + 2, 46, tint(boots, 0.6))
-    px.fill(profile(cx, 29, 34, (bw[3] - 0.4, bw[3] + 0.2, bw[3] - 1.2)), hips or legs)
-    pts = bw if crop_y >= 30 else (bw[0], bw[1], bw[2] + 0.6)
-    px.fill(profile(cx, 19, crop_y, pts), shirt)
-    for s in (-1, 1):
-        px.fill(
-            capsule(cx + s * (bw[0] - 0.5), 20.5, cx + s * (bw[0] + 1.1), 29.5, 1.7),
-            sleeves or skin,
-        )
-        px.fill(circle(cx + s * (bw[0] + 1.5), 31.5, 1.9), gloves or skin)
-    px.fill(capsule(cx, 15.0, cx, 17.5, 1.9), tint(skin, 0.84))  # neck
-    head = ellipse(cx, 10, 5.9, 6.8)
+    px.fill(capsule(19, 29.5, 18, 35, 2.1), tint(pants, 0.72))
+    px.rect(15, 35, 20, 38, tint(boots, 0.75))
+    px.set(21, 37, tint(boots, 0.75))  # toe
+    px.hline(15, 21, 38, tint(boots, 0.5))  # sole
+    px.fill(profile(CHK_CX, 28, 32, (5.4, 5.2, 4.2)), pants)
+    px.fill(capsule(25, 29.5, 26, 36, 2.1), pants)
+    px.rect(23, 36, 28, 39, boots)
+    px.set(29, 38, boots)  # toe
+    px.hline(23, 29, 39, tint(boots, 0.55))  # sole
+    px.fill(profile(CHK_CX, 19, crop_y, torso_hw), shirt)
+    px.fill(capsule(CHK_CX, 17.0, CHK_CX, 19.5, 2.0), tint(skin, 0.8))  # neck
+    head = ellipse(CHK_CX, 12, 7.2, 7.0)
     px.paint(head, skin)
-    px.paint(lambda x, y: head(x, y) and y <= 6, tint(skin, 1.08))
-    px.paint(lambda x, y: head(x, y) and y >= 14, tint(skin, 0.9))
-    return px, cx, head
+    px.paint(lambda x, y: head(x, y) and y >= 16, tint(skin, 0.9))
+    px.set(29, 14, skin)  # profile nose
+    px.set(29, 15, tint(skin, 0.84))
+    return px, head
 
 
-def _grip(px, x, y, c):
-    """Repaint a hand over a just-drawn weapon so the fist holds it."""
-    px.fill(circle(x, y, 1.9), c)
+def _eyes(px, c=(24, 20, 34), one=False):
+    """Simple 1x2 dark eyes at the shared eye line; `one` for a bang-covered
+    back eye."""
+    px.vline(27, 12, 13, c)
+    if not one:
+        px.vline(24, 12, 13, c)
 
 
-def _face48(px, cx, skin, eye=(84, 64, 52), brows=DARK, lash=False,
-            heavy=False, mouth="soft", blush=None):
-    """Readable face: 2x2 eyes with an iris column, lids, brows, nose, mouth."""
-    lid = mix(brows, DARK, 0.5)
-    for s in (-1, 1):
-        ex = cx - 4 if s < 0 else cx + 2
-        px.rect(ex, 10, ex + 1, 11, PALE)
-        px.vline(ex + (1 if s < 0 else 0), 10, 11, eye)  # iris toward the nose
-        px.hline(ex - 1, ex + 2, 9, lid)  # upper lid
-        px.hline(ex, ex + 1, 7, brows)  # brow
-        if heavy:
-            px.hline(ex - 1, ex + 2, 8, brows)
-        if lash:
-            px.set(ex - 1 if s < 0 else ex + 2, 10, brows)
-    px.set(cx, 13, tint(skin, 0.8))  # nose
-    dark = tint(skin, 0.58)
-    if mouth == "soft":
-        px.hline(cx - 1, cx + 1, 15, dark)
-    elif mouth == "smile":
-        px.hline(cx - 1, cx + 1, 15, dark)
-        px.dots([(cx - 2, 14), (cx + 2, 14)], dark)
-    elif mouth == "smirk":
-        px.hline(cx - 1, cx + 1, 15, dark)
-        px.set(cx + 2, 14, dark)
-    elif mouth == "grin":
-        px.hline(cx - 2, cx + 2, 14, dark)
-        px.hline(cx - 1, cx + 1, 15, (238, 238, 244))
-    if blush:
-        px.dots([(cx - 4, 13), (cx + 4, 13)], blush, 110)
+def _mass(px, mask, base, top=True):
+    """Punchy hair/cloth shading: flat base, deep 2px bottom shadow, then a
+    bright 2px band following the top of the silhouette (skip for masses
+    that sit mid-figure, like beards, where a light band reads wrong)."""
+    px.paint(mask, base)
+    pts = px.mask_pixels(mask)
+    for (x, y) in pts:
+        if not mask(x, y + 2):
+            px.set(x, y, tint(base, 0.6))
+    if top:
+        for (x, y) in pts:
+            if not mask(x, y - 2):
+                px.set(x, y, tint(base, 1.35))
 
 
 def char_ranger():
-    # Scout captain. Teal ponytail, cropped field jacket over a bare
-    # midriff, fingerless gloves, long precision rifle.
+    # Scout captain: teal bob + ponytail, cropped jacket, bare midriff,
+    # levelled precision rifle held in both hands.
     skin = (226, 178, 136)
-    hair = (40, 160, 180)
+    hair = (42, 168, 188)
     c = desat(C["ranger"], 0.12)
-
-    def back(px):
-        px.fill(capsule(HERO_CX - 6.5, 7, HERO_CX - 9, 20, 2.2), tint(hair, 0.78))
-        px.fill(capsule(HERO_CX - 9, 20, HERO_CX - 7.5, 27, 1.4), tint(hair, 0.6))
-
-    px, cx, head = _person(skin, "f", c, sleeves=tint(c, 0.9),
-                           gloves=(58, 50, 68), crop_y=24, back=back)
-    px.fill(profile(cx, 25, 29, (5.0, 4.7, 5.6)), skin)  # bare midriff
-    px.set(cx, 28, tint(skin, 0.72))  # navel
-    px.hline(cx - 6, cx + 6, 29, (48, 40, 56))  # low belt
-    px.set(cx, 29, (216, 186, 96))
-    px.hline(cx - 5, cx + 5, 19, tint(c, 1.22))  # collar
-    px.vline(cx, 20, 24, tint(c, 0.68))  # zip
-    px.dots([(cx - 3, 22), (cx + 3, 22)], tint(c, 0.8))  # pocket studs
-    px.paint(lambda x, y: head(x, y) and y <= 6, hair)
-    px.paint(lambda x, y: head(x, y) and y <= 8 and abs(x - cx) >= 4, hair)  # framing
-    px.paint(lambda x, y: head(x, y) and y <= 9 and x >= cx + 4, hair)  # side sweep
-    px.fill(circle(cx - 6.5, 6, 1.8), hair)  # ponytail knot
-    px.dots([(cx - 3, 7), (cx + 3, 7)], hair)  # loose fringe
-    px.dots([(cx - 1, 4), (cx, 4), (cx + 1, 5)], tint(hair, 1.24))  # shine
-    _face48(px, cx, skin, eye=(96, 66, 44), lash=True, mouth="smile",
-            blush=(232, 130, 110))
-    px.vline(cx + 11, 5, 28, STEEL)  # rifle barrel
-    px.vline(cx + 12, 8, 26, tint(STEEL, 0.72))
-    px.set(cx + 11, 4, PALE)  # muzzle glint
-    px.hline(cx + 10, cx + 12, 14, tint(STEEL, 0.6))  # sight block
-    px.rect(cx + 10, 26, cx + 12, 31, (108, 80, 56))  # stock
-    px.dots([(cx + 8, 21), (cx + 5, 23), (cx + 2, 25)], (70, 58, 62))  # sling
-    _grip(px, cx + 8.5, 31.5, (58, 50, 68))
+    px, head = _chunk(skin, c, (50, 46, 64), (40, 62, 74), crop_y=25)
+    px.fill(profile(CHK_CX, 25, 28, (4.8, 4.9, 5.2)), skin)  # bare midriff
+    px.set(CHK_CX, 27, tint(skin, 0.7))  # navel
+    px.hline(17, 27, 28, (48, 40, 56))  # low belt
+    px.set(CHK_CX, 28, (216, 186, 96))
+    px.hline(18, 26, 19, tint(c, 1.2))  # collar
+    px.vline(CHK_CX, 20, 24, tint(c, 0.68))  # zip
+    px.fill(capsule(19, 21.5, 25, 24, 1.5), tint(c, 0.62))  # back arm
+    hm = union(
+        lambda x, y: head(x, y) and (y <= 8 or x <= 18),
+        ellipse(15, 8, 4.0, 3.6),  # bob volume
+        capsule(13, 9, 11, 21, 2.4),  # ponytail
+        capsule(11, 21, 12, 27, 1.5),  # tail tip
+    )
+    _mass(px, hm, hair)
+    px.dots([(21, 9), (24, 9), (26, 9)], hair)  # fringe tips
+    px.hline(20, 28, 10, tint(skin, 0.78))  # fringe shadow
+    _eyes(px)
+    px.dots([(21, 15), (28, 16)], (232, 130, 110), 100)  # blush
+    px.hline(26, 41, 22, STEEL)  # rifle, held level
+    px.hline(28, 40, 23, tint(STEEL, 0.7))
+    px.set(42, 22, PALE)  # muzzle
+    px.set(33, 21, tint(STEEL, 0.8))  # sight
+    px.rect(22, 21, 25, 24, (108, 80, 56))  # stock
+    px.fill(capsule(25, 22, 30, 24.5, 1.5), tint(c, 0.9))  # front arm
+    px.fill(circle(31, 24, 1.7), (58, 50, 68))  # gloves on the grip
+    px.fill(circle(26, 24.5, 1.6), (58, 50, 68))
     px.outline()
     return px
 
 
 def char_blitz():
-    # Duelist. Spiked blond hair, red scarf, sleeveless vest, bare arms,
-    # twin daggers held low.
+    # Duelist: swept-back blond spikes, scarf streaming behind, gold vest,
+    # low lunge with a dagger forward and one reversed behind.
     skin = (238, 196, 158)
-    hair = (230, 196, 90)
+    hair = (232, 198, 92)
     c = desat(C["blitz"], 0.12)
-
-    def back(px):
-        px.fill(capsule(HERO_CX - 7, 18, HERO_CX - 12, 14.5, 1.5), (198, 72, 58))
-        px.dots([(HERO_CX - 13, 13), (HERO_CX - 13, 14)], (172, 60, 50))
-
-    px, cx, head = _person(skin, "m", c, legs=(54, 48, 66), back=back)
-    px.paint(lambda x, y: 19 <= y <= 21 and abs(x - cx) <= 21 - y, skin)  # V-neck
-    px.vline(cx - 4, 20, 28, tint(c, 0.66))  # vest edges
-    px.vline(cx + 4, 20, 28, tint(c, 0.66))
-    px.hline(cx - 6, cx + 6, 30, (48, 40, 56))  # belt
-    px.set(cx, 30, (216, 186, 96))
-    px.dots([(cx - 8, 20), (cx + 8, 20)], tint(skin, 1.14))  # deltoid light
-    for s in (-1, 1):  # forearm wraps
-        ax = cx + s * 9
-        px.rect(ax - 1, 26, ax + 1, 28, (76, 66, 86))
-    px.hline(cx - 4, cx + 4, 17, (222, 88, 70))  # scarf
-    px.hline(cx - 4, cx + 4, 18, (198, 72, 58))
-    px.paint(lambda x, y: head(x, y) and y <= 6, hair)
-    for dx, top in ((-5, 5), (-3, 3), (-1, 2), (1, 1), (3, 2), (5, 4)):  # spikes
-        px.vline(cx + dx, top, 6, hair)
-    px.dots([(cx - 3, 4), (cx, 3), (cx + 1, 2)], tint(hair, 1.22))
-    px.hline(cx - 4, cx + 4, 6, tint(hair, 0.82))  # under-shade
-    _face48(px, cx, skin, eye=(74, 108, 66), mouth="grin")
-    for s in (-1, 1):  # daggers angled down-out
-        hx = cx + s * 9.9
-        _grip(px, hx, 31.5, skin)
-        px.set(int(hx + s * 2), 31, (216, 186, 96))  # guard
-        for i in range(4):
-            px.set(int(hx + s * (2 + i)), 32 + i, (218, 226, 238))
-        px.set(int(hx + s * 6), 36, PALE)  # tip
+    px, head = _chunk(skin, c, (54, 48, 66), (70, 58, 76))
+    px.paint(lambda x, y: 19 <= y <= 21 and abs(x - CHK_CX) <= 21 - y, skin)  # V-neck
+    px.vline(18, 20, 27, tint(c, 0.66))  # vest edges
+    px.vline(26, 20, 27, tint(c, 0.66))
+    px.hline(17, 27, 28, (48, 40, 56))  # belt
+    px.set(CHK_CX, 28, (216, 186, 96))
+    px.fill(capsule(19, 21.5, 14, 26, 1.5), tint(skin, 0.8))  # back arm
+    px.fill(circle(13.5, 27, 1.6), tint(skin, 0.8))
+    px.set(12, 27, (216, 186, 96))  # reversed dagger behind
+    px.dots([(11, 28), (10, 29)], (214, 222, 236))
+    sc = union(capsule(18, 18.5, 26, 18.5, 1.4), capsule(17, 18, 10, 14, 2.0))
+    _mass(px, sc, (210, 80, 62))  # scarf + streaming tail
+    hm = union(
+        lambda x, y: head(x, y) and (y <= 8 or x <= 17),
+        capsule(16, 5, 11, 2.5, 1.8),  # swept-back spikes
+        capsule(15, 8, 10, 6.5, 1.6),
+        capsule(15, 11, 11, 11, 1.4),
+        capsule(20, 4, 24, 2.5, 1.7),  # front spike
+    )
+    _mass(px, hm, hair)
+    px.dots([(10, 2), (9, 7), (22, 9), (25, 9)], hair)  # spike + fringe tips
+    px.hline(20, 28, 10, tint(skin, 0.78))  # fringe shadow
+    _eyes(px)
+    px.set(25, 16, tint(skin, 0.55))  # grin
+    px.set(26, 16, (242, 242, 246))  # tooth glint
+    px.fill(capsule(25, 21.5, 30, 26.5, 1.6), skin)  # front arm, lunging low
+    px.fill(circle(30.5, 27, 1.7), skin)
+    px.set(31, 26, (216, 186, 96))  # guard
+    for i in range(4):  # blade forward-down
+        px.set(32 + i, 28 + i, (218, 226, 238))
+    px.set(36, 32, PALE)  # tip
     px.outline()
     return px
 
 
 def char_bastion():
-    # Veteran wall. Dark-skinned and bald with a grey beard and a scarred
-    # brow; plate cuirass, round pauldrons, tower shield and arming sword.
+    # Veteran wall: bald, grey-bearded, scarred brow; sword shouldered
+    # behind, tower shield braced in front.
     skin = (150, 104, 72)
-    beard = (192, 188, 182)
+    beard = (196, 192, 186)
     c = desat(C["bastion"], 0.12)
-    px, cx, head = _person(skin, (9.0, 8.0, 6.2, 7.0), c, sleeves=tint(c, 0.8),
-                           gloves=tint(c, 0.94), legs=(58, 56, 66), boots=(52, 50, 62))
-    px.vline(cx, 19, 28, tint(c, 1.14))  # cuirass ridge
-    px.hline(cx - 6, cx + 6, 26, tint(c, 0.62))  # waist plates
-    px.hline(cx - 5, cx + 5, 29, tint(c, 0.62))
-    px.dots([(cx - 4, 21), (cx + 4, 21), (cx - 5, 24), (cx + 5, 24)], tint(c, 0.55))
-    for s in (-1, 1):  # round pauldrons
-        px.fill(circle(cx + s * 8.8, 20.5, 2.7), tint(c, 1.1))
-        px.set(int(cx + s * 8.8), 23, tint(c, 0.6))
-    px.dots([(cx - 2, 4), (cx - 1, 4), (cx, 4), (cx - 3, 5)], tint(skin, 1.2))  # shine
-    px.paint(lambda x, y: head(x, y) and y >= 14, beard)
-    px.fill(ellipse(cx, 16.5, 3.4, 2.2), beard)  # full jaw
-    px.hline(cx - 2, cx + 2, 18, tint(beard, 0.8))
-    _face48(px, cx, skin, eye=(58, 50, 46), brows=(126, 122, 118), heavy=True,
-            mouth="hidden")
-    px.hline(cx - 1, cx + 1, 14, tint(beard, 1.12))  # mustache
-    px.dots([(cx + 3, 6), (cx + 3, 8)], tint(skin, 1.35))  # brow scar
-    sh = profile(cx - 12.5, 13, 33, (2.4, 3.1, 3.1, 2.5))  # tower shield
-    px.fill(sh, tint(c, 1.06))
+    px, head = _chunk(skin, c, (58, 56, 66), (52, 50, 62),
+                      torso_hw=(6.6, 6.2, 5.4, 6.0))
+    px.vline(CHK_CX, 19, 27, tint(c, 1.15))  # cuirass ridge
+    px.hline(17, 27, 25, tint(c, 0.62))  # waist plate
+    px.dots([(19, 21), (25, 21), (18, 24), (26, 24)], tint(c, 0.55))  # rivets
+    px.hline(17, 27, 28, (48, 42, 52))
+    px.fill(circle(16.5, 20, 2.9), tint(c, 1.08))  # back pauldron
+    for i in range(9):  # sword shouldered up-back
+        px.set(15 - i, 17 - i, (214, 222, 236))
+        px.set(16 - i, 17 - i, (166, 174, 188))
+    px.set(6, 8, PALE)  # tip glint
+    px.set(15, 18, (216, 186, 96))  # guard
+    px.dots([(20, 6), (21, 6), (22, 7)], tint(skin, 1.2))  # crown shine
+    bm = union(
+        lambda x, y: head(x, y) and y >= 15 and x >= 19,
+        ellipse(25, 18, 4.2, 2.6),
+    )
+    _mass(px, bm, beard, top=False)  # full beard, no light band mid-face
+    px.hline(23, 28, 11, (128, 124, 120))  # heavy brow bar
+    _eyes(px)
+    px.dots([(26, 9), (26, 10)], tint(skin, 1.32))  # brow scar
+    px.set(26, 11, skin)  # scar notches the brow
+    sh = profile(31, 16, 34, (2.8, 3.5, 3.5, 2.7))  # tower shield, braced
+    px.fill(sh, tint(c, 1.05))
     px.paint(
-        lambda x, y: sh(x, y) and 15 <= y <= 31 and abs(x - (cx - 12.5)) <= 1.6,
+        lambda x, y: sh(x, y) and abs(x - 31) <= 1.6 and 18 <= y <= 32,
         tint(c, 0.8),
     )
-    px.dots(
-        [(cx - 14, 19), (cx - 13, 20), (cx - 12, 21), (cx - 11, 20), (cx - 10, 19)],
-        tint(c, 1.24),
-    )  # chevron
-    px.vline(cx + 11, 8, 27, (216, 224, 236))  # sword
-    px.vline(cx + 12, 9, 26, (166, 174, 188))
-    px.set(cx + 11, 7, PALE)
-    px.hline(cx + 9, cx + 13, 28, (216, 186, 96))  # crossguard
-    _grip(px, cx + 10.5, 31.5, tint(c, 0.94))
-    px.set(cx + 11, 34, (216, 186, 96))  # pommel
+    px.dots([(29, 21), (30, 22), (31, 23), (32, 22), (33, 21)], tint(c, 1.24))
+    px.fill(capsule(25, 22, 28, 25, 1.6), tint(c, 0.8))  # front arm to shield
     px.outline()
     return px
 
 
 def char_jinx():
-    # Trickster gambler. Long magenta waves over one eye, off-shoulder top,
-    # flared gold-trimmed skirt, spinning coin and a palmed card.
+    # Trickster gambler: huge magenta waves with a bang over the back eye,
+    # off-shoulder top, flared skirt, tall boots, coin toss mid-flip.
     skin = (240, 190, 150)
-    hair = (218, 74, 142)
+    hair = (222, 78, 148)
     c = desat(C["jinx"], 0.12)
-
-    def back(px):
-        for s, y1 in ((-1, 27), (1, 25)):  # waves down both sides
-            px.fill(
-                capsule(HERO_CX + s * 6, 8, HERO_CX + s * 7.5, y1, 2.0),
-                tint(hair, 0.76),
-            )
-            px.dots(
-                [(HERO_CX + s * 9, y1 - 2), (HERO_CX + s * 8, y1 + 1)], tint(hair, 0.6)
-            )
-
-    px, cx, head = _person(skin, "f", c, legs=skin, hips=tint(c, 0.7),
-                           boots=(60, 40, 72), back=back)
-    px.paint(lambda x, y: 19 <= y <= 20 and -7 <= x - cx <= -2, skin)  # bare shoulder
-    px.hline(cx - 7, cx - 2, 21, tint(c, 1.24))  # slanted neckline
-    px.hline(cx - 2, cx + 6, 19, tint(c, 1.24))
-    px.fill(profile(cx, 29, 35, (6.6, 7.6, 8.8)), tint(c, 0.7))  # flared skirt
-    px.hline(cx - 8, cx + 8, 35, (232, 196, 100))  # gold hem
-    px.hline(cx - 6, cx + 6, 29, tint(c, 0.5))  # waistband
-    px.hline(cx + 2, cx + 5, 37, (120, 60, 100))  # thigh band
-    for s in (-1, 1):  # bracelets
-        px.set(int(cx + s * 8.5), 29, (232, 196, 100))
-    _face48(px, cx, skin, eye=(128, 60, 132), lash=True, mouth="smirk",
-            blush=(236, 122, 112))
-    px.set(cx + 4, 14, tint(skin, 0.62))  # beauty mark
-    px.paint(lambda x, y: head(x, y) and y <= 6, hair)  # crown
-    px.paint(lambda x, y: head(x, y) and x <= cx - 1 and y <= 12, hair)  # deep bang
-    px.dots([(cx, 8), (cx + 1, 7), (cx - 1, 10)], hair)  # bang sweep
-    px.dots([(cx - 5, 13), (cx - 4, 14), (cx - 2, 13)], tint(hair, 0.84))  # bang tips
-    px.dots([(cx - 2, 4), (cx - 1, 3)], tint(hair, 1.24))  # shine
-    px.fill(circle(cx + 10, 26, 1.6), (240, 202, 96))  # coin
-    px.set(cx + 10, 26, (255, 240, 180))
-    px.dots([(cx + 10, 23), (cx + 12, 26), (cx + 8, 26)], (255, 240, 180), 150)
-    px.rect(cx - 13, 27, cx - 11, 30, PALE)  # thrown card
-    px.set(cx - 12, 28, (204, 64, 64))
+    bc = (66, 44, 78)
+    px, head = _chunk(skin, c, skin, bc, torso_hw=(5.6, 5.2, 4.4, 5.4))
+    px.rect(23, 34, 28, 35, bc)  # tall boot cuffs over bare legs
+    px.rect(15, 33, 20, 34, tint(bc, 0.75))
+    px.fill(profile(CHK_CX, 26, 30, (5.6, 6.2, 7.0)), tint(c, 0.72))  # skirt
+    px.hline(16, 28, 30, (232, 196, 100))  # gold hem
+    px.hline(17, 27, 26, tint(c, 0.5))  # waistband
+    px.hline(24, 27, 33, (130, 64, 108))  # thigh band
+    px.paint(lambda x, y: 19 <= y <= 20 and 16 <= x <= 19, skin)  # bare shoulder
+    px.hline(16, 19, 21, tint(c, 1.24))  # slanted neckline
+    px.hline(20, 27, 19, tint(c, 1.24))
+    px.fill(capsule(19, 21.5, 15.5, 25.5, 1.4), tint(skin, 0.82))  # back arm
+    px.fill(circle(15, 26.5, 1.5), tint(skin, 0.82))
+    px.rect(12, 24, 14, 27, PALE)  # palmed card
+    px.set(13, 25, (204, 64, 64))
+    hm = union(
+        lambda x, y: head(x, y) and (y <= 9 or x <= 19),
+        lambda x, y: 9 <= y <= 13 and 20 <= x <= 21 + (y - 9),  # bang, back eye
+        ellipse(15, 11, 4.6, 5.0),  # wave volume
+        capsule(13, 16, 11, 27, 2.8),  # falling waves
+        capsule(11, 27, 13, 31, 1.8),
+    )
+    _mass(px, hm, hair)
+    px.dots([(12, 20), (13, 24)], tint(hair, 0.55))  # wave notches
+    px.hline(25, 28, 10, tint(skin, 0.78))  # fringe shadow
+    _eyes(px, one=True)
+    px.set(28, 11, (24, 20, 34))  # lash flick
+    px.set(26, 16, tint(skin, 0.55))  # smirk
+    px.set(27, 15, tint(skin, 0.55))
+    px.set(24, 16, tint(skin, 0.62))  # beauty mark
+    px.fill(capsule(26.5, 21.5, 30, 18, 1.4), skin)  # front arm raised
+    px.fill(circle(30.5, 17, 1.5), skin)
+    px.set(30, 19, (232, 196, 100))  # bracelet
+    px.fill(circle(33, 12, 1.9), (242, 204, 96))  # lucky coin
+    px.set(33, 11, (255, 242, 184))
+    px.dots([(33, 8), (36, 12), (30, 10)], (255, 242, 184), 150)  # sparkle
     px.outline()
     return px
 
 
 def char_volt():
-    # Arcanist. White undercut over shaved sides, high-collared storm coat
-    # with lit seams, orb staff. Deliberately androgynous.
+    # Arcanist: white sweep over a shaved side, storm coat with lit seams
+    # flaring behind, orb staff planted in front. Androgynous.
     skin = (216, 208, 214)
-    hair = (240, 246, 252)
+    hair = (242, 246, 252)
     c = desat(C["volt"], 0.12)
-    glow = mix(c, PALE, 0.55)
-    px, cx, head = _person(skin, "n", tint(c, 0.72), sleeves=tint(c, 0.62),
-                           gloves=(58, 52, 72), legs=(50, 46, 64), hips=tint(c, 0.66))
-    px.fill(profile(cx, 30, 40, (6.4, 6.0, 5.0)), tint(c, 0.66))  # coat skirt
-    px.vline(cx, 32, 40, (46, 42, 60))  # center split
+    glow = mix(c, PALE, 0.5)
+    px, head = _chunk(skin, tint(c, 0.7), (50, 46, 64), (48, 44, 60),
+                      torso_hw=(5.8, 5.4, 4.8, 5.2))
+    cm = profile(21, 28, 37, (6.0, 5.6, 4.9))  # coat skirt
+    _mass(px, cm, tint(c, 0.62))
+    px.vline(24, 29, 37, (46, 42, 60))  # front split
     for s in (-1, 1):  # lit seams
-        px.vline(cx + s * 3, 21, 37, glow)
-    px.dots([(cx, 22), (cx - 1, 23), (cx, 24), (cx - 1, 25)], (255, 250, 190))  # bolt
-    px.hline(cx - 4, cx + 4, 17, tint(c, 0.9))  # high collar
-    px.hline(cx - 3, cx + 3, 18, tint(c, 0.9))
-    px.paint(lambda x, y: head(x, y) and y <= 6, (94, 102, 118))  # shaved sides
-    px.paint(lambda x, y: head(x, y) and y <= 6 and x <= cx + 1, hair)  # swept top
-    px.dots([(cx - 5, 7), (cx - 6, 8), (cx - 4, 7)], hair)  # falling lock
-    _face48(px, cx, skin, eye=(120, 235, 255), brows=(96, 104, 118), mouth="soft")
-    px.vline(cx - 11, 6, 33, (104, 80, 58))  # staff
-    px.vline(cx - 11, 13, 20, (124, 98, 72))  # grain light
-    px.dots([(cx - 12, 5), (cx - 10, 5)], (104, 80, 58))  # fork
-    px.glow(circle(cx - 11, 3, 1.4), glow, 2, 90)
-    px.fill(circle(cx - 11, 3, 1.6), glow)  # orb
-    px.set(cx - 11, 3, PALE)
-    px.dots([(cx - 13, 2), (cx - 9, 1)], glow, 150)  # static
-    _grip(px, cx - 9.1, 31.5, (58, 52, 72))
+        px.vline(CHK_CX + s * 3, 21, 35, glow)
+    px.dots([(22, 22), (21, 23), (22, 24)], (255, 250, 190))  # bolt emblem
+    px.hline(16, 18, 18, tint(c, 0.95))  # collar nubs beside the chin
+    px.hline(26, 28, 18, tint(c, 0.95))
+    px.fill(capsule(19, 21.5, 16, 26, 1.4), tint(c, 0.55))  # back arm
+    px.fill(circle(15.5, 27, 1.5), (58, 52, 72))
+    px.paint(lambda x, y: head(x, y) and y <= 10 and x <= 18, (96, 104, 120))  # shave
+    hm = union(
+        lambda x, y: head(x, y) and y <= 6 and x >= 16,
+        capsule(17, 5.5, 27, 7.5, 1.7),  # forward sweep hugging the skull
+    )
+    _mass(px, hm, hair)
+    px.dots([(26, 9), (28, 8)], hair)  # sweep tips
+    px.hline(20, 28, 10, tint(skin, 0.8))  # fringe shadow
+    _eyes(px, (130, 240, 255))  # arc-lit eyes
+    px.hline(25, 26, 16, tint(skin, 0.6))  # calm mouth
+    px.vline(32, 7, 33, (106, 82, 60))  # staff
+    px.vline(32, 14, 22, (126, 100, 74))
+    px.dots([(31, 6), (33, 6)], (106, 82, 60))  # fork
+    px.glow(circle(32, 4, 1.5), glow, 2, 90)
+    px.fill(circle(32, 4, 1.7), glow)  # orb
+    px.set(32, 4, PALE)
+    px.dots([(30, 2), (34, 3), (35, 6)], glow, 150)  # static
+    px.fill(capsule(25, 22, 30, 24.5, 1.5), tint(c, 0.55))  # front arm
+    px.fill(circle(31, 25, 1.7), (58, 52, 72))  # grip
     px.outline()
     return px
 

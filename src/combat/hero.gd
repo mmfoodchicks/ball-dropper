@@ -19,6 +19,7 @@ var _aim := Vector2.RIGHT
 var _no_dmg_t := 99.0
 var _tex: Texture2D = null
 var _anim_t := 0.0
+var _flip := false
 
 
 func _ready() -> void:
@@ -62,6 +63,10 @@ func step(dt: float, move_dir: Vector2, manual_aim: Vector2) -> void:
 		_aim = (predicted - position).normalized()
 	elif moving:
 		_aim = move_dir.normalized()
+	# Latch sprite facing only on a clear horizontal aim, so aiming straight
+	# up/down doesn't flicker the flip.
+	if absf(_aim.x) > 0.2:
+		_flip = _aim.x < 0.0
 
 	# Auto-fire while any target exists (or when manually aiming).
 	var want_fire := target != null or manual_aim.length() > 0.2
@@ -129,13 +134,18 @@ func _draw() -> void:
 	if iframes > 0.0:
 		a = 0.45 + 0.4 * sin(iframes * 40.0)
 	if _tex != null:
-		# Char art is a 48px canvas shown at ~37px, so faces keep
-		# more texels per screen pixel than the enemy sprites.
-		var side := _tex.get_width() / 4.0 * 0.78
+		# Char art is a 48px canvas whose figure fills ~38px, drawn oversized
+		# so faces keep more texels per screen pixel than the enemy sprites.
+		# Art faces right; mirror it to follow the aim.
+		var side := _tex.get_width() / 4.0 * 0.85
 		var bob := sin(_anim_t * 5.0) * 1.1
+		if _flip:
+			draw_set_transform(Vector2.ZERO, 0.0, Vector2(-1.0, 1.0))
 		draw_texture_rect(
 			_tex, Rect2(-side * 0.5, -side * 0.5 + bob, side, side), false, Color(1, 1, 1, a)
 		)
+		if _flip:
+			draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 	else:
 		draw_circle(Vector2.ZERO, radius() + 4.0, Color(0.35, 0.85, 1.0, 0.14 * a))
 		draw_circle(Vector2.ZERO, radius(), Color(0.35, 0.85, 1.0, a))
