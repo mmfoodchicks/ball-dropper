@@ -241,13 +241,16 @@ C = {
 
 
 # ---------------------------------------------------------------- characters
-# The five playables are HAND-DRAWN pixel maps (32x32), not procedural
-# shapes: every pixel is placed deliberately, the way the reference packs
-# are made. Shared skeleton across the cast — hair cap rows 2-6 with a
-# fringe-shadow row, 1x2 eyes on the same eye line (cols 13/16), chin row
-# 12, torso rows 14-21, split-stance legs, boots on the same ground line —
-# with hue-shifted ramps (shadows go cool, highlights warm) per character.
+# The five playables are HAND-DRAWN 32x32 pixel maps built to the design
+# conventions the most successful pixel games converge on (all original
+# art): ~2.2 head-to-body ratio so faces carry expression at small sizes,
+# chunky 2x2 doll eyes on the shared eye line, silhouette-first identity
+# (each character owns one exaggerated signature shape + one hue family),
+# <=16 colors per sprite with hue-shifted ramps (shadows go cool, lights
+# go warm), a single top-left light source, and a dark outline hue-shifted
+# toward each character's palette instead of uniform black.
 # Legend: '.' transparent; letters are palette entries per character.
+# Short rows are right-padded with transparency by from_map.
 
 
 def from_map(rows, pal):
@@ -268,274 +271,271 @@ def from_map(rows, pal):
 
 
 RANGER_PAL = {
-    "!": (176, 240, 244), "H": (52, 174, 194), "h": (28, 112, 144),
-    "S": (238, 190, 142), "s": (198, 138, 106), "E": (26, 20, 36),
-    "J": (64, 126, 150), "j": (40, 86, 114), "+": (112, 178, 196),
-    "P": (60, 56, 80), "p": (42, 38, 58),
-    "B": (80, 62, 54), "b": (54, 40, 38),
-    "G": (56, 48, 66), "O": (232, 194, 102),
-    "M": (188, 196, 210), "m": (124, 132, 152),
-    "W": (136, 98, 64), "w": (96, 66, 46), "*": (242, 248, 252),
+    "!": (186, 242, 242), "H": (54, 178, 196), "h": (26, 104, 140),
+    "S": (240, 194, 148), "s": (198, 132, 110), "E": (24, 20, 38),
+    "J": (62, 124, 152), "j": (36, 78, 110),
+    "G": (100, 74, 56), "g": (66, 48, 44), "d": (52, 46, 64),
+    "M": (192, 200, 214), "m": (124, 132, 154),
+    "*": (244, 250, 252), "O": (238, 200, 108),
+    "P": (64, 56, 86), "p": (44, 38, 62),
 }
 
 # Scout captain: teal bob + ponytail, cropped jacket over a bare midriff,
-# both gloved hands on a levelled rifle.
+# gloved hands on a levelled rifle with a wooden stock.
 RANGER_MAP = [
-    "................................",
-    "................................",
-    "..........!!!!H.................",
-    "........h!!HHHHHH...............",
-    ".......hHHHHHHHHHHH.............",
-    "......hHhHHHHHHHHHh.............",
-    "......hHhHHsssssssh.............",
-    "......hHhHsSSSSSSSS.............",
-    "......hHhsSSSESSESS.............",
-    "......hhhsSSSESSESSS............",
-    ".......hhSSSSSSSSSss............",
-    "........hsSSSSSssSs.............",
-    "......hH...sSSSSs...............",
-    "......hh...+ssss+...............",
-    ".......h.j++JJJJJJj.....m.......",
-    ".......hjJJWWWMMMMMMGMMMMMMMM*..",
-    "........jJwwwwGGmmmmGmmmmmm.....",
-    ".........JJJJJJJJj..............",
-    ".........jJJJJJJjj..............",
-    "...........sSSSSs...............",
-    "...........sSSsSs...............",
-    "..........GGGGOGGG..............",
-    "..........pPPPPPPP..............",
-    "..........pPP.PPPP..............",
-    "..........pPP.PPPP..............",
-    "..........ppP.PPPP..............",
-    ".........bBBB.PPPP..............",
-    ".........bBBB.BBBBB.............",
-    ".........bbbb.BBBBB.............",
-    "..............bbbbb.............",
-    "................................",
-    "................................",
+    "",
+    "..........!!!HH",
+    "........hH!!HHHHHH",
+    ".......hHHHHHHHHHHHH",
+    "......hHhHHHHHHHHHHHh",
+    ".....hHhHHHHHHHHHHHHh",
+    ".....hHHhhssssssssssh",
+    ".....hHHhhSSSSSSSSSSh",
+    ".....hHHhhSSSSSSSSSS",
+    ".....hHHhhSSEESSEESS",
+    ".....hHHhhSSEESSEESS",
+    ".....hHHhhsSSSSSSSSs",
+    ".....hHHh..sSSSssSSs",
+    "......hH....sSSSSs",
+    "......hh..jJJJJJJJJj",
+    "......h..jJGGgMMMMMMdMMMMMMMM*",
+    ".........jJggddmmmmmdmmmmmm",
+    ".........jJJJJJJJJj",
+    ".........jjJJJJJJjj",
+    "...........sSSSSSs",
+    "...........sSSsSSs",
+    "..........gGGGOGGGg",
+    "..........pPPPPPPPP",
+    "..........pPP.PPPP",
+    "..........pPP.PPPP",
+    ".........gGGG.PPPP",
+    ".........gGGG.GGGGG",
+    ".........gggg.GGGGG",
+    "..............ggggg",
+    "",
+    "",
+    "",
 ]
 
 BLITZ_PAL = {
-    "A": (238, 204, 96), "a": (186, 140, 56), "!": (252, 240, 178),
-    "S": (242, 198, 158), "s": (204, 148, 110), "E": (26, 20, 36),
-    "V": (224, 170, 60), "v": (176, 122, 46), "+": (246, 210, 122),
-    "R": (214, 86, 66), "r": (164, 58, 52),
-    "P": (58, 52, 72), "p": (40, 36, 54),
-    "B": (76, 60, 76), "b": (52, 40, 54),
-    "G": (58, 50, 68), "O": (232, 194, 102),
-    "M": (210, 218, 232), "m": (142, 150, 168), "*": (244, 248, 252),
+    "A": (240, 206, 98), "a": (188, 140, 58), "!": (252, 240, 180),
+    "S": (242, 198, 158), "s": (206, 146, 112), "E": (24, 20, 38),
+    "V": (218, 160, 66), "v": (166, 112, 50),
+    "R": (216, 88, 66), "r": (160, 56, 52),
+    "G": (96, 72, 58), "g": (64, 48, 44),
+    "M": (214, 222, 236), "*": (246, 250, 252), "O": (238, 200, 108),
+    "P": (60, 52, 76), "p": (42, 36, 56),
 }
 
-# Duelist: spiked blond crown, scarf tail streaming behind, gold vest with
-# a V-neck, dagger low in the lead hand and one reversed behind.
+# Duelist: windswept blond spikes, scarf tail streaming behind, gold vest
+# with a V-neck, dagger low in the lead hand and one reversed behind.
 BLITZ_MAP = [
-    "................................",
-    ".........A...A...A..............",
-    "........AAA.AAA.AAA.............",
-    "........aAAAAAAAAAA.............",
-    ".......aA!!AAAAAAAA.............",
-    ".......aAAAAAAAAAAAa............",
-    ".......aAAsssssssss.............",
-    ".......aAaSSSSSSSSS.............",
-    ".......aAaSSSESSESS.............",
-    "........AaSSSESSESSS............",
-    ".........aSSSSSSSSss............",
-    "..........sSSSs*Sss.............",
-    "...........sSSSSs...............",
-    "..........RRRRRRRRr.............",
-    ".....RRrsS++VVVVVvSs............",
-    "....Rr..sSvVSSSVVvSs............",
-    "........sSvVVSVVVv.Ss...........",
-    "......mmS.vVVVVVVv..SS..........",
-    "..........vVVVVVVv..SSO.........",
-    "..........vvVVVVvv.....M........",
-    "..........GGGGOGGG......M.......",
-    "..........pPPPPPPP.......M......",
-    "..........pPP.PPPP........*.....",
-    "..........pGG.GGGG..............",
-    "..........pPP.PPPP..............",
-    "..........ppP.PPPP..............",
-    ".........bBBB.PPPP..............",
-    ".........bBBB.BBBBB.............",
-    ".........bbbb.BBBBB.............",
-    "..............bbbbb.............",
-    "................................",
-    "................................",
+    "",
+    "..........A...A...A",
+    ".........AAA.AAA.AA",
+    "........aAAAAAAAAAAA",
+    ".......aA!!AAAAAAAAA",
+    ".......aAAAAAAAAAAAAa",
+    ".......aAAssssssssssa",
+    ".......aAaSSSSSSSSSS",
+    ".......aAaSSSSSSSSSS",
+    ".......aaaSSEESSEESS",
+    "........aaSSEESSEESS",
+    "........aasSSSSSSSSs",
+    "..........sSSSs*SSs",
+    "............sSSSSs",
+    "..........RRRRRRRRr",
+    ".....RRr.sSvVVVVVvSs",
+    "....Rr...sSvVSSSVvSs",
+    "........sSvVVSVVVv.Ss",
+    "......MMS.vVVVVVVv..SS",
+    "..........vvVVVVvv..SSO",
+    "..........gGGGOGGGg....M",
+    "..........pPPPPPPPP.....M",
+    "..........pPP.PPPP.......M",
+    "..........pGG.GGGG........*",
+    "..........pPP.PPPP",
+    ".........gGGG.PPPP",
+    ".........gGGG.GGGGG",
+    ".........gggg.GGGGG",
+    "..............ggggg",
+    "",
+    "",
+    "",
+    "",
 ]
 
 BASTION_PAL = {
-    "S": (162, 112, 78), "s": (120, 78, 56), "!": (196, 146, 100),
-    "D": (208, 204, 198), "d": (158, 154, 152),
-    "w": (92, 86, 82), "E": (26, 20, 36),
-    "C": (152, 160, 176), "c": (106, 114, 132), "+": (198, 206, 220),
-    "P": (66, 62, 76), "p": (46, 42, 56),
-    "B": (92, 98, 112), "b": (62, 66, 78),
-    "G": (52, 46, 56), "O": (232, 194, 102),
-    "M": (214, 222, 236), "m": (150, 158, 172), "*": (246, 250, 253),
-    "T": (172, 180, 194), "t": (120, 128, 144),
+    "S": (164, 114, 80), "s": (122, 80, 58), "!": (200, 150, 102),
+    "D": (210, 206, 200), "d": (160, 156, 152),
+    "w": (94, 88, 84), "E": (24, 20, 38),
+    "C": (154, 162, 178), "c": (108, 116, 134), "+": (200, 208, 222),
+    "O": (238, 200, 108), "M": (232, 238, 248), "m": (150, 158, 172),
+    "*": (248, 252, 254),
+    "P": (68, 62, 80), "p": (48, 44, 60), "G": (52, 46, 56),
 }
 
-# Veteran wall: bald crown with a shine, heavy grey brow bar and beard,
-# scarred cheek, sword raised behind the shoulder, tower shield braced in
-# front with a domed top, gold boss stud and a tapered foot.
+# Veteran wall: bald crown with a shine, heavy grey brow bar over the
+# eyes, full beard, scarred cheek, sword raised behind the shoulder and a
+# domed tower shield with a gold boss braced in front.
 BASTION_MAP = [
     "",
     "",
     "...........SSSS",
-    "..........S!!SSSS",
-    ".........SS!SSSSSS",
-    ".........sSSSSSSSSS",
-    ".........sSSSSSSSSS",
-    "..*......sSSwwwwwwS",
-    "..Mm.....sSSSESSESS",
-    "...Mm....sSSSESSES!",
-    "....Mm...sSDDDDDDDs",
-    ".....Mm..sDDDDDDDDd",
-    "......Mm..DDDDDDDDd",
-    ".......Mm.dDDDDDDd...TTT",
-    ".....OOOc++CCCCCCC+cTTTTTt",
-    "......GSscCCCCCCCCc.TTTTTTt",
-    "........scCCCCCCCCc.TT+O+Tt",
-    ".........cCCCCCCCCc.TT+O+Tt",
-    ".........ccCCCCCCcc.TT+O+Tt",
-    ".........cCCCCCCCCc.TTTTTTt",
-    ".........GGGGGOGGGG.TTTTTTt",
-    "..........pPPPPPPP..TTTTTTt",
-    "..........pPP.PPPP...TTTTTt",
-    "..........pPP.PPPP....TTTt",
-    "..........ppP.PPPP.....Tt",
-    "..........ppP.PPPP",
+    ".........SS!!SSSS",
+    "........sSS!SSSSSS",
+    "........sSSSSSSSSSS",
+    "........sSSSSSSSSSSS",
+    "..*.....sSSSSSSSSSSS",
+    "..Mm....sSSwwwwwwwwS",
+    "...Mm...sSSEESSEESS",
+    "....Mm..sSSEESSEES!",
+    ".....Mm..sSDDDDDDDDs",
+    "......Mm..sDDDDDDDDd",
+    ".......Mm.DDDDDDDDd..CCC",
+    ".....OOOc+CCCCCCCC+cCCCCCc",
+    "......cSscCCCCCCCCc.CCCCCCc",
+    "........scCCCCCCCCc.CC+O+Cc",
+    ".........cCCCCCCCCc.CC+O+Cc",
+    ".........ccCCCCCCcc.CC+O+Cc",
+    ".........cCCCCCCCCc.CCCCCCc",
+    ".........GGGGGOGGGG.CCCCCCc",
+    "..........pPPPPPPP..CCCCCCc",
+    "..........pPP.PPPP...CCCCCc",
+    "..........pPP.PPPP....CCCc",
+    "..........ppP.PPPP.....Cc",
+    ".........cCCC.PPPP",
+    ".........cCCC.CCCCC",
+    ".........cccc.CCCCC",
+    "..............ccccc",
+    "",
+    "",
+    "",
+]
+
+JINX_PAL = {
+    "K": (232, 92, 158), "k": (170, 48, 116), "!": (252, 174, 214),
+    "S": (244, 198, 154), "s": (208, 146, 112), "E": (24, 20, 38),
+    "V": (152, 90, 200), "v": (106, 56, 152),
+    "B": (90, 52, 114), "b": (62, 34, 82),
+    "O": (238, 200, 108), "*": (255, 246, 200),
+    "C": (242, 244, 250), "c": (208, 74, 74),
+}
+
+# Trickster gambler: long waves with a bang hiding the back eye, violet
+# off-shoulder dress with a gold hem, tall boots, coin tossed above the
+# raised hand and a card palmed behind.
+JINX_MAP = [
+    "",
+    "..........KKKK",
+    ".........K!!KKKKK",
+    "........kK!KKKKKKK",
+    ".......kKKKKKKKKKKKK",
+    "......kKKKKKKKKKKKKKk",
+    "......kKKKKKKKKsssssk",
+    "......kKKKKKKKKSSSSS........*",
+    "......kKKKKKKKSSEESS..OOO",
+    "......kKKKKKKKSSEESS..O*O",
+    ".......kKKKKKKSSEESS.....*",
+    ".......kKksSSSSSSSSs.SS",
+    ".......kk..sSSSssSSsSS",
+    ".......kk...sSSSSs.SS",
+    "......kk..sSvVVVVvVS",
+    "......kk.sSvVVVVVv",
+    "....CCCSk.vVVVVVVv",
+    "....CcCsk.vvVVVVvv",
+    "....CCC...vvvvvvvv",
+    ".........vVVVVVVVVv",
+    "........vVVVVVVVVVVv",
+    "........OOOOOOOOOOOO",
+    "..........sSS.SSSS",
+    "..........sSS.vvvv",
+    ".........bBBB.BBBBB",
+    ".........bBBB.BBBBB",
+    ".........bBBB.BBBBB",
+    ".........bbbb.BBBBB",
+    "..............bbbbb",
+    "",
+    "",
+    "",
+]
+
+VOLT_PAL = {
+    "W": (246, 249, 253), "w": (178, 190, 206), "N": (90, 98, 114),
+    "S": (216, 200, 210), "s": (168, 148, 166), "E": (140, 242, 255),
+    "C": (66, 152, 164), "c": (42, 108, 124), "+": (200, 248, 252),
+    "*": (255, 252, 214),
+    "P": (58, 54, 72), "p": (42, 38, 56),
+    "B": (48, 44, 62), "b": (34, 30, 46),
+    "T": (126, 96, 66), "t": (92, 68, 48), "G": (60, 54, 74),
+    "g": (154, 238, 248),
+}
+
+# Arcanist: white sweep over a shaved side, storm coat with lit seams and
+# a bolt emblem, orb staff planted in the lead hand. Androgynous.
+VOLT_MAP = [
+    "",
+    "",
+    "......................gg",
+    "..........WWWW........gWg",
+    ".........WWWWWWWWW....ttt",
+    ".........wWWWWWWWWWW....T",
+    ".........NNWWWWWWWWw....T",
+    ".........NNNssssssss....T",
+    ".........NsSSSSSSSSS....T",
+    ".........NsSEESSEESS....T",
+    ".........NsSEESSEESS....t",
+    "..........sSSSSSSSSs....t",
+    "..........sSSSSssSSs....t",
+    "...........sSSSSs.......t",
+    "........c+CCCCCCC+cCCCCGT",
+    "........cCCCCCCCCCc...GGT",
+    "........cCC+C*C+CCc.....T",
+    "........cCC+*CC+CCc.....T",
+    "........cCC+CCC+CCc.....T",
+    "........ccC+CCC+Ccc.....T",
+    "........cCC+CCC+cCc.....T",
+    "........ccccccccccc.....T",
+    "..........pPP.PPPP......T",
+    "..........pPP.PPPP......t",
+    "..........pPP.PPPP",
     ".........bBBB.PPPP",
     ".........bBBB.BBBBB",
     ".........bbbb.BBBBB",
     "..............bbbbb",
     "",
     "",
-]
-
-JINX_PAL = {
-    "K": (228, 88, 154), "k": (170, 46, 112), "!": (250, 172, 210),
-    "S": (242, 196, 152), "s": (206, 144, 110), "E": (26, 20, 36),
-    "V": (150, 88, 198), "v": (106, 54, 150), "+": (192, 136, 228),
-    "B": (88, 50, 112), "b": (60, 32, 80),
-    "O": (234, 198, 104), "*": (255, 246, 200),
-    "C": (240, 242, 250), "c": (206, 72, 72),
-}
-
-# Trickster gambler: long waves with a bang hiding the back eye, violet
-# off-shoulder dress with a gold hem, tall boots, coin tossed above the
-# lead hand and a card palmed behind.
-JINX_MAP = [
-    "................................",
-    "................................",
-    "..........KKKK..................",
-    ".........K!!KKKK................",
-    "........KK!KKKKKK...............",
-    ".......kKKKKKKKKKKK.............",
-    ".......kKKKKKKKKKKKk............",
-    ".......kKKKKKKsssss....*........",
-    ".......kKKKKKKSSESS..OOO........",
-    "........kKKKKSSSESSS.O*O........",
-    "........kKKkSSSSSSSs.....*......",
-    "........kksSSSSsSsS.SS..........",
-    "...........sSSSSs..SS...........",
-    ".......kk..ssss..SSS............",
-    "......kkSSs+VVVVvVS.............",
-    "......kkSsvVVVVVVv..............",
-    "....CCCSk.vVVVVVVv..............",
-    "....CcCsk.vvVVVVvv..............",
-    "....CCC...vvvvvvvv..............",
-    ".........vVVVVVVVVv.............",
-    "........vVVVVVVVVVVv............",
-    "........OOOOOOOOOOOO............",
-    "..........sSS.SSSS..............",
-    "..........sSS.vvvv..............",
-    ".........bBBB.BBBBB.............",
-    ".........bBBB.BBBBB.............",
-    ".........bBBB.BBBBB.............",
-    ".........bBBB.BBBBB.............",
-    ".........bbbb.BBBBB.............",
-    "..............bbbbb.............",
-    "................................",
-    "................................",
-]
-
-VOLT_PAL = {
-    "W": (246, 249, 253), "w": (176, 188, 204), "N": (88, 96, 112),
-    "S": (214, 198, 208), "s": (166, 146, 164), "E": (140, 242, 255),
-    "C": (64, 150, 162), "c": (40, 106, 122), "+": (198, 248, 252),
-    "*": (255, 252, 214),
-    "P": (56, 52, 70), "p": (40, 36, 54),
-    "B": (50, 46, 62), "b": (36, 32, 46),
-    "T": (124, 94, 64), "t": (90, 66, 46), "G": (60, 54, 74),
-    "g": (152, 236, 246), "o": (232, 250, 252),
-}
-
-# Arcanist: white sweep over a shaved side, storm coat with lit seams and
-# a bolt emblem, orb staff planted in the lead hand. Androgynous.
-VOLT_MAP = [
-    "................................",
-    "................................",
-    ".......................gg.......",
-    "..........WWWW........gog.......",
-    ".........WWWWWWWWWW...ttt.......",
-    ".........wWWWWWWWWWW....T.......",
-    ".........NNwWWWWWWWw....T.......",
-    ".........NNNsssssss.....T.......",
-    ".........NsSSESSESS.....T.......",
-    ".........NsSSESSESSS....T.......",
-    "..........sSSSSSSSSs....t.......",
-    "..........sSSSSssSS.....t.......",
-    "...........sSSSSs.......t.......",
-    "..........+ssss++.......T.......",
-    "........c+CCCCCCC+cCCCCGT.......",
-    "........cCCCCCCCCCc...GGT.......",
-    "........cCC+C*C+CCc.....T.......",
-    "........cCC+*CC+CCc.....T.......",
-    "........cCC+CCC+CCc.....T.......",
-    "........ccC+CCC+Ccc.....T.......",
-    "........cCC+CCC+cCc.....T.......",
-    "........cCC+CCC+cCc.....T.......",
-    "........ccccccccccc.....T.......",
-    "..........pPP.PPPP......T.......",
-    "..........pPP.PPPP......t.......",
-    "..........ppP.PPPP..............",
-    ".........bBBB.PPPP..............",
-    ".........bBBB.BBBBB.............",
-    ".........bbbb.BBBBB.............",
-    "..............bbbbb.............",
-    "................................",
-    "................................",
+    "",
 ]
 
 
 def char_ranger():
     px = from_map(RANGER_MAP, RANGER_PAL)
-    px.outline()
+    px.outline((14, 26, 42, 255))  # deep teal-navy
     return px
 
 
 def char_blitz():
     px = from_map(BLITZ_MAP, BLITZ_PAL)
-    px.outline()
+    px.outline((40, 24, 26, 255))  # warm maroon-brown
     return px
 
 
 def char_bastion():
     px = from_map(BASTION_MAP, BASTION_PAL)
-    px.outline()
+    px.outline((20, 22, 34, 255))  # cold slate
     return px
 
 
 def char_jinx():
     px = from_map(JINX_MAP, JINX_PAL)
-    px.outline()
+    px.outline((42, 18, 46, 255))  # deep wine
     return px
 
 
 def char_volt():
     px = from_map(VOLT_MAP, VOLT_PAL)
-    px.outline()
+    px.outline((16, 30, 42, 255))  # deep blue-teal
     return px
 
 
